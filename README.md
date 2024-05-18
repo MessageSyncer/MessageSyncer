@@ -1,9 +1,11 @@
 <div align="center">
 
+<img src="./doc/logo.png" width="150" height="">
+
 # MessageSyncer
 An asynchronous push framework.
 
 </div>
 
 > [!NOTE]
-> The project is under construction.
+> This project is under construction.
