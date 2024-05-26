@@ -1,0 +1,7 @@
+aiocron
+peewee
+Pillow
+PyYAML
+Requests
+fastapi
+uvicorn
