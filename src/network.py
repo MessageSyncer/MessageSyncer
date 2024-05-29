@@ -15,20 +15,21 @@ def _requests_method_wrapper(origin):
     return new_method
 
 
-force_proxies_patch = util.get_patches({
-    'from': 'requests.Session',
-    'wrapper': _requests_method_wrapper,
-    'globals': globals().copy(),
-    'method': [
-        'get',
-        'post',
-        'put',
-        'delete',
-        'head',
-        'patch',
-        'request',
-    ]
-})
+def force_proxies_patch():
+    return util.get_patches({
+        'from': 'requests.Session',
+        'wrapper': _requests_method_wrapper,
+        'globals': globals().copy(),
+        'method': [
+            'get',
+            'post',
+            'put',
+            'delete',
+            'head',
+            'patch',
+            'request',
+        ]
+    })
 
 
 def force_proxies(func):

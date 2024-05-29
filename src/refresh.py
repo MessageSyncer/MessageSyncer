@@ -7,14 +7,16 @@ import config
 import asyncio
 import threading
 import aiocron
+import network
 
 setting: dict[Getter, list[tuple[Pusher, dict]]] = {}
 
 
 def get_refresh_thread(getter: Getter, var: dict = {}):
     def thread():
-        var.clear()
-        var.update(asyncio.run(_refresh_worker(getter)))
+        with network.force_proxies_patch():
+            var.clear()
+            var.update(asyncio.run(_refresh_worker(getter)))
     return threading.Thread(target=thread)
 
 
@@ -127,7 +129,7 @@ async def _refresh_worker(getter: Getter):
         try:
             if not config.main.perf_merged_details:
                 raise NotImplementedError()
-            
+
             if list_:
                 detail = await getter.details([id.replace(getter_prefix, '', 1) for id in list_])
                 detail.user_id = getter_prefix + detail.user_id
@@ -138,12 +140,13 @@ async def _refresh_worker(getter: Getter):
                 await process_result(detail, logging.getLogger(','.join(list_)))
         except NotImplementedError as e:
             works = []
+
             async def process_signal_article(id):
                 detail = await getter.detail(id.replace(getter_prefix, '', 1))
                 detail.user_id = getter_prefix + detail.user_id
                 article_store.store_article(id, detail)
                 await process_result(detail, logging.getLogger(id))
-            for id_ in list_:                
+            for id_ in list_:
                 works.append(process_signal_article(id_))
             await asyncio.gather(*works)
 

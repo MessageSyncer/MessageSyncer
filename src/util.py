@@ -27,7 +27,7 @@ def download(url, path):
 async def async_download(url, path):
     path = str(path)
     logging.debug(f'Start to download from {url} to {path}')
-    response = await asyncio.threads.to_thread(requests.get, url)
+    response = await asyncio.threads.to_thread(requests.get, url, proxies={})
     if response.status_code == 200:
         with open(path, 'wb') as file:
             file.write(response.content)
