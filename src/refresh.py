@@ -11,20 +11,20 @@ import aiocron
 setting: dict[Getter, list[tuple[Pusher, dict]]] = {}
 
 
-def get_fresh_thread(getter: Getter, var: dict = {}):
+def get_refresh_thread(getter: Getter, var: dict = {}):
     def thread():
         var.clear()
-        var.update(asyncio.run(_fresh_worker(getter)))
+        var.update(asyncio.run(_refresh_worker(getter)))
     return threading.Thread(target=thread)
 
 
-def fresh(getter: Getter):
-    get_fresh_thread(getter).start()
+def refresh(getter: Getter):
+    get_refresh_thread(getter).start()
 
 
-async def block_fresh(getter: Getter):
+async def block_refresh(getter: Getter):
     result = {}
-    thread = get_fresh_thread(getter, result)
+    thread = get_refresh_thread(getter, result)
     thread.start()
     thread.join()
     return result
@@ -34,12 +34,12 @@ async def register_all_trigger():
     for getter in setting:
         for trigger in getter.config['trigger']:
             register_corn(getter, trigger)
-        if config.main.fresh_when_start:
-            fresh(getter)
+        if config.main.refresh_when_start:
+            refresh(getter)
 
 
 def register_corn(getter: Getter, trigger: str):
-    cron = aiocron.crontab(trigger, fresh, (getter,), start=True)
+    cron = aiocron.crontab(trigger, refresh, (getter,), start=True)
     getter._trigger[trigger] = cron
     logging.debug(f'{getter} registered: {trigger}')
     return cron
@@ -61,14 +61,14 @@ def unregister_corn(getter: Getter, trigger: str):
     logging.debug(f'{getter} unregistered: {trigger}')
 
 
-async def _fresh_worker(getter: Getter):
+async def _refresh_worker(getter: Getter):
     global setting
 
     logger = getter.logger
     getter_type = getter.__class__.__name__
     getter_prefix = getter_type + '_'
 
-    logger.debug('Freshing')
+    logger.debug('Refreshing')
     if not getter.available:
         logger.debug(f'Unavailable. Passed')
         return {}
@@ -147,10 +147,10 @@ async def _fresh_worker(getter: Getter):
                 works.append(process_signal_article(id_))
             await asyncio.gather(*works)
 
-        logger.debug(f'Freshing finished')
+        logger.debug(f'Refreshing finished')
         getter._first = False
     except Exception as e:
-        logger.error(f'× (freshing): {e}', exc_info=True)
+        logger.error(f'× (refreshing): {e}', exc_info=True)
     getter._working = False
 
     return {}  # TODO: finish it

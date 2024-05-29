@@ -111,7 +111,7 @@ class MainConfig:
     pair: list[str] = field(default_factory=list[str])
     logging: LoggingConfig = field(default_factory=LoggingConfig)
     api: APIConfig = field(default_factory=APIConfig)
-    fresh_when_start: bool = True
+    refresh_when_start: bool = True
     first_get_donot_push: bool = True
     block: list[str] = field(default_factory=list[str])
     perf_merged_details: list[str] = field(default_factory=list[str])

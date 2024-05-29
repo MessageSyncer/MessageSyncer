@@ -6,13 +6,13 @@ from util import *
 import asyncio
 import logging
 import config
-import fresh
+import refresh
 import log
 import api
 
 
 async def main():
-    matches = fresh.setting
+    matches = refresh.setting
     for pair in config.main.pair:
         pair: str
         pair = pair.split(' ', 1)
@@ -23,7 +23,7 @@ async def main():
         logging.debug(f'Distribute {push_detail} to {getter}')
         matches.setdefault(getter, []).append(push_detail)
 
-    await fresh.register_all_trigger()
+    await refresh.register_all_trigger()
 
     api.serve()
     while True:
