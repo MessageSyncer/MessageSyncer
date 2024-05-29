@@ -71,7 +71,7 @@ async def _fresh_worker(getter: Getter):
     logger.debug('Freshing')
     if not getter.available:
         logger.debug(f'Unavailable. Passed')
-        return
+        return {}
 
     getter._working = True
 
