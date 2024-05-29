@@ -9,6 +9,7 @@ from PIL import Image
 from pathlib import Path
 from peewee import SqliteDatabase
 from urllib.parse import urlparse
+from unittest.mock import patch
 
 
 def download(url, path):
@@ -69,3 +70,34 @@ def get_key_by_value(dictionary, value):
 
 def byte_to_MB(byte):
     return byte / (1024**2)
+
+
+def _wrap_method(group):
+    if group.get('result'):
+        return
+    result = {}
+
+    wrapper = group['wrapper']
+    from_ = group['from']
+
+    for method_name in group['method']:
+        absolute_name = from_ + '.' + method_name
+        origin_method = eval(absolute_name, group['globals'], {})
+        result[method_name] = wrapper(origin_method)
+
+    group['result'] = result
+
+
+def get_patches(group):
+    _wrap_method(group)
+    return patch.multiple(group['from'], **group['result'])
+
+
+def run_with_patch(groups: list[str], func, *args, **kwargs):
+    group = groups.pop()
+    _wrap_method(group)
+    with get_patches(group=group):
+        if groups:
+            return run_with_patch(groups, func, *args, **kwargs)
+        else:
+            return func(*args, **kwargs)

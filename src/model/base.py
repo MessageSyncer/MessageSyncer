@@ -1,7 +1,7 @@
 from abc import abstractmethod, ABC
 from dataclasses import dataclass, asdict, field
 from typing import TypeVar, Generic
-from config import get_config
+from config import get_config_manager
 import typing
 from util import *
 from .struct import Struct
@@ -44,8 +44,8 @@ class Adapter(ABC, Generic[TADAPTERCONFIG, TADAPTERINSTANCECONFIG]):
                 _t = dict
             return _t
 
-        self._config = get_config(_process_type(0, TADAPTERCONFIG), self.class_name)
-        self._instance_config = get_config(_process_type(1, TADAPTERINSTANCECONFIG), self.name)
+        self._config = get_config_manager(_process_type(0, TADAPTERCONFIG), self.class_name)
+        self._instance_config = get_config_manager(_process_type(1, TADAPTERINSTANCECONFIG), self.name)
 
         self.logger = logging.getLogger(self.name)
 

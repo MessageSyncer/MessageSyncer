@@ -22,7 +22,8 @@ class HotReloadConfigManager(Generic[T]):
         else:
             self.config_path.touch()
             config = "{}"
-            write_back = True
+            write_back = False
+        write_back = True
 
         now_hash = hash(config)
         if now_hash == self._last_hash:
@@ -73,29 +74,42 @@ class HotReloadConfigManager(Generic[T]):
         config = from_dict(self.config_type, config)
 
         if write_back:
-            write_back_config = config
             if self.config_type != dict:  # TODO: remove dict access support
                 write_back_config = asdict(config)
+            else:
+                write_back_config = config
             write_yaml(self.config_path, write_back_config)
 
         self._last_config = config
         return config
 
 
-def get_config(config_type: Type[T], name) -> HotReloadConfigManager[T]:
+def get_config_manager(config_type: Type[T], name) -> HotReloadConfigManager[T]:
     config_file = path / f'{name}.yaml'
     return HotReloadConfigManager(config_type, config_file)
 
 
 @dataclass
-class Logging:
-    verbose: bool = None
-
-
-@dataclass
 class MainConfig:
-    logging: Logging = field(default_factory=Logging)
+    @dataclass
+    class LoggingConfig:
+        verbose: bool = False
+
+    @dataclass
+    class APIConfig:
+        token: list[str] = field(default_factory=list[str])
+        port: int = 11589
+
+    pair: list[str] = field(default_factory=list[str])
+    logging: LoggingConfig = field(default_factory=LoggingConfig)
+    api: APIConfig = field(default_factory=APIConfig)
+    fresh_when_start: bool = True
+    first_get_donot_push: bool = True
+    block: list[str] = field(default_factory=list[str])
+    perf_merged_details: list[str] = field(default_factory=list[str])
+    proxies: dict[str, str] = field(default_factory=dict[str, str])  # This field will be passed directly to requests.request
 
 
-main = get_config(dict, 'main').value
-verbose = main.get('verbose', False)
+main_manager = get_config_manager(MainConfig, 'main')
+main = main_manager.value
+verbose = main.logging.verbose

@@ -13,7 +13,7 @@ import api
 
 async def main():
     matches = fresh.setting
-    for pair in config.main.get('pair', []):
+    for pair in config.main.pair:
         pair: str
         pair = pair.split(' ', 1)
 

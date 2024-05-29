@@ -9,7 +9,6 @@ database_path = Path('../data') / 'database'
 database_path.mkdir(parents=True, exist_ok=True)
 main_db = SqliteDatabase(database_path / 'main.db')
 
-
 class _ArticleStore:
     class Article(Model):
         id = CharField(primary_key=True, null=False)
@@ -21,13 +20,9 @@ class _ArticleStore:
             database = main_db
 
     def __init__(self) -> None:
-        self._list = []
-
         _ArticleStore.Article.create_table()
 
     def store_article(self, id: str, result: GetResult):
-        if config.main.get('using_memory_cache_store', True):
-            self._list.append(id)
         _ArticleStore.Article.create(id=id, userId=result.user_id, ts=result.ts, content=json.dumps(result.content.asdict(), ensure_ascii=False))
 
     def get_article(self, id: str):
@@ -35,9 +30,6 @@ class _ArticleStore:
         return GetResult(article.userId, article.ts, Struct(article.content))
 
     def article_exists(self, id: str) -> bool:
-        if config.main.get('using_memory_cache_store', True):
-            if id in self._list:
-                return True
         return self._get_article_byid(id) != None
 
     def _get_article_byid(self, id: str):
