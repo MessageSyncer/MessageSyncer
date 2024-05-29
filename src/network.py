@@ -11,7 +11,14 @@ def _process_proxy(dict_: dict):
 def _requests_method_wrapper(origin):
     def new_method(*args, **kwargs):
         kwargs = _process_proxy(kwargs)
-        return origin(*args, **kwargs)
+
+        max_retry_time = 2
+        for i in range(max_retry_time):
+            try:
+                return origin(*args, **kwargs)
+            except:
+                if i == max_retry_time-1:
+                    raise
     return new_method
 
 
@@ -33,7 +40,7 @@ def force_proxies_patch():
 
 
 def force_proxies(func):
-    """This is a decorator, and the decorated function will enforce the use of the configured proxy.
+    """This is a decorator that forces all requests from the requests library in the decorated function to use the configured proxy.
     """
     def wrapper(*args, **kwargs):
         result = util.run_with_patch([{
