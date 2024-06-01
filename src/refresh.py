@@ -86,7 +86,7 @@ async def _refresh_worker(getter: Getter):
             try:
                 content = result.content
                 content_text = str(content)
-                logger.info(content_text)
+                # logger.info(content_text)
 
                 push = True
                 push_passed_reason = []

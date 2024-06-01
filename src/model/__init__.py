@@ -6,7 +6,7 @@ import logging
 import importlib
 import sys
 from typing import List
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, asdict
 from pathlib import Path
 
 def import_all_to_dict(path: Path) -> dict:
