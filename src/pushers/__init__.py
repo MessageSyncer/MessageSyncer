@@ -1,11 +1,11 @@
 from model import *
 from util import *
 
-pushers_inited: list[Getter] = []
+pushers_inited: list[Pusher] = []
 path = Path() / 'pushers'
 
 
-def init_pusher(pusher) -> Getter:
+def init_pusher(pusher) -> Pusher:
     _pusher = pusher.rsplit('.', 1)
     pusher = _pusher[0]
     pusher_to = _pusher[1]

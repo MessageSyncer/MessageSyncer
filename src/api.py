@@ -4,9 +4,12 @@ import uvicorn
 import log
 import config
 import refresh
+import pushers
+import time
 
 from util import *
 from model import *
+from store import article_store
 from typing import Annotated, Optional
 from pydantic import BaseModel
 from fastapi import FastAPI, HTTPException, Depends, Response, Path, Header, Request
@@ -44,6 +47,13 @@ def get_getter(getter_str: str) -> Getter:
     ls = [_getter for _getter in refresh.setting if _getter.name == getter_str]
     if len(ls) != 0:
         return ls
+    raise HTTPException(404, 'The specified pusher does not exist.')
+
+
+def get_pusher(pusher_str: str) -> Pusher:
+    ls = [_pusher for _pusher in pushers.pushers_inited if _pusher.name == pusher_str]
+    if len(ls) != 0:
+        return ls
     raise HTTPException(404, 'The specified getter does not exist.')
 
 
@@ -56,6 +66,17 @@ class GetterInfo():
 
     config: dict
     instance_config: dict
+
+
+@dataclass
+class Article():
+    # content: list[Struct]
+    id: str
+    text: str
+    markdown: str
+
+    ts: int
+    user_id: str
 
 
 @app.get("/")
@@ -88,6 +109,22 @@ async def getter(getter: str, auth=Depends(authenticate)) -> GetterInfo:
 @app.post("/getters/{getter:str}/refresh", response_model=type(None))
 async def refresh_getter(getter: str, auth=Depends(authenticate)):
     refresh.refresh(get_getter(getter))
+
+
+@app.post("/articles/")
+async def list_all_articles(limit: int = 10, before_ts: int = 1000000000, auth=Depends(authenticate)) -> list[Article]:
+    if before_ts == 1000000000:
+        before_ts = int(time.time())
+    return [
+        Article(id, str(ar.content), ar.content.asmarkdown(), ar.ts, ar.user_id)
+        for id, ar in article_store.get_articles(limit, before_ts)
+    ]
+
+
+@app.post("/articles/{id}")
+async def article(id: str, auth=Depends(authenticate)) -> Article:
+    ar = article_store.get_article(id=id)
+    return Article(id, str(ar.content), ar.content.asmarkdown(), ar.ts, ar.user_id)
 
 
 def serve():

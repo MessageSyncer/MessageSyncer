@@ -9,6 +9,7 @@ database_path = Path('../data') / 'database'
 database_path.mkdir(parents=True, exist_ok=True)
 main_db = SqliteDatabase(database_path / 'main.db')
 
+
 class _ArticleStore:
     class Article(Model):
         id = CharField(primary_key=True, null=False)
@@ -27,10 +28,20 @@ class _ArticleStore:
 
     def get_article(self, id: str):
         article = self._get_article_byid(id)
-        return GetResult(article.userId, article.ts, Struct(article.content))
+        return GetResult(article.userId, article.ts, Struct(json.loads(article.content)))
+
+    def get_articles(self, limit: int, tsoffset: int):
+        query = _ArticleStore.Article.select().where(_ArticleStore.Article.ts < tsoffset).order_by(_ArticleStore.Article.ts.desc()).limit(limit)
+        return [
+            (article.id, GetResult(article.userId, article.ts, Struct(json.loads(article.content))))
+            for article in query
+        ]
 
     def article_exists(self, id: str) -> bool:
         return self._get_article_byid(id) != None
+
+    def total_count(self) -> int:
+        return _ArticleStore.Article.select().count()
 
     def _get_article_byid(self, id: str):
         return _ArticleStore.Article.get_or_none(_ArticleStore.Article.id == id)
