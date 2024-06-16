@@ -1,4 +1,6 @@
-src/pusher
-src/getter
+src/pushers/*
+src/getters/*
+!src/pushers/__init__.py
+!src/getters/__init__.py
 __pycache__
 data

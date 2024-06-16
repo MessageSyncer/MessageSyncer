@@ -12,13 +12,7 @@ class PusherInstanceConfig(AdapterInstanceConfig):
     pass
 
 
-@dataclass
-class PushResult:
-    succeed: bool
-    exception: Exception = None
-
-
 class Pusher(Adapter[TADAPTERCONFIG, TADAPTERINSTANCECONFIG], Generic[TADAPTERCONFIG, TADAPTERINSTANCECONFIG]):
     @abstractmethod
-    async def push(self, content: Struct, to: str) -> PushResult:
+    async def push(self, content: Struct, to: str) -> None:
         pass

@@ -1,5 +1,5 @@
-from getters import init_getter
-from pushers import init_pusher
+from getters import get_getter
+from pushers import get_pusher
 from model import *
 from util import *
 
@@ -17,8 +17,8 @@ async def main():
         pair: str
         pair = pair.split(' ', 1)
 
-        getter = init_getter(pair[0])
-        push_detail = init_pusher(pair[1])
+        getter = get_getter(pair[0])
+        push_detail = pair[1]
 
         logging.debug(f'Distribute {push_detail} to {getter}')
         matches.setdefault(getter, []).append(push_detail)

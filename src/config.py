@@ -32,16 +32,16 @@ class HotReloadConfigManager(Generic[T]):
 
         config = yaml.safe_load(config)
 
-        def from_dict(data_type: T, data: dict) -> T:  
+        def from_dict(data_type: T, data: dict) -> T:
             # TODO: remove dict access support
             # FIXME: check
             """Instantiate data classes from dictionaries, including working with nested data classes."""
 
-            if data_type in [dict,int,str,list,float,None]:
+            if data_type in [dict, int, str, list, float, None]:
                 return data
-            
+
             try:
-                if data_type.__origin__ in [dict,list]:
+                if data_type.__origin__ in [dict, list]:
                     return data
             except:
                 pass
@@ -75,7 +75,7 @@ class HotReloadConfigManager(Generic[T]):
 
             dict_access()
             fieldtypes = {f.name: f.type for f in data_type.__dataclass_fields__.values()}
-            obj = data_type(**{f: from_dict(fieldtypes[f], data[f]) if isinstance(data[f], dict) else data[f] for f in data})
+            obj = data_type(**{f: from_dict(fieldtypes[f], data[f]) if isinstance(data[f], dict) else data[f] for f in data if f in fieldtypes})
 
             return obj
 
@@ -108,7 +108,12 @@ class MainConfig:
         token: list[str] = field(default_factory=list[str])
         port: int = 11589
 
+    @dataclass
+    class Warning:
+        to: list[str] = field(default_factory=list[str])
+
     pair: list[str] = field(default_factory=list[str])
+    warning: Warning = field(default_factory=Warning)
     logging: LoggingConfig = field(default_factory=LoggingConfig)
     api: APIConfig = field(default_factory=APIConfig)
     refresh_when_start: bool = True

@@ -8,7 +8,7 @@ getters_inited: list[Getter] = []
 path = Path() / 'getters'
 
 
-def init_getter(getter_str) -> Getter:
+def get_getter(getter_str) -> Getter:
     if matched := [_getter for _getter in getters_inited if _getter.name == getter_str]:
         getter = matched[0]
     else:

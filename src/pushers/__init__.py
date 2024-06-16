@@ -5,7 +5,7 @@ pushers_inited: list[Pusher] = []
 path = Path() / 'pushers'
 
 
-def init_pusher(pusher) -> Pusher:
+def get_pusher(pusher) -> tuple[Pusher, dict]:
     _pusher = pusher.rsplit('.', 1)
     pusher = _pusher[0]
     pusher_to = _pusher[1]
@@ -19,3 +19,12 @@ def init_pusher(pusher) -> Pusher:
         logging.debug(f'{pusher} initialized')
 
     return pusher, {'to': pusher_to}
+
+
+async def push_to(pusher, content: Struct):
+    pusher, detail = get_pusher(pusher)
+
+    logger = pusher.logger.getChild(f'{hash(content)}')
+    logger.debug(f'Start to push {hash(content)}')
+    await pusher.push(content, **detail)
+    logger.debug('End')

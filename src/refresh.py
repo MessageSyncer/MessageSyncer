@@ -1,15 +1,17 @@
 from model import *
 from util import *
 from store import article_store
-
+import time
 import re
 import config
 import asyncio
 import threading
 import aiocron
 import network
+import pushers
+import warning
 
-setting: dict[Getter, list[tuple[Pusher, dict]]] = {}
+setting: dict[Getter, list[str]] = {}
 
 
 def get_refresh_thread(getter: Getter, var: dict = {}):
@@ -80,7 +82,7 @@ async def _refresh_worker(getter: Getter):
     try:
         list_ = await getter.list()
         list_ = [getter_prefix + id for id in list_]
-        logger.debug(f'-> {list_}')
+        logger.debug(f'Latest list: {list_}')
 
         async def process_result(result: GetResult, logger: logging.Logger):
             try:
@@ -102,25 +104,23 @@ async def _refresh_worker(getter: Getter):
                         push_passed_reason.append(f'triggers block "{rule}"')
 
                 if push:
-                    for pusher, push_detail in setting[getter]:
-                        pushing_logger = logger.getChild(f' -> {pusher} + {push_detail}')
-                        pushing_logger.info('Start')
-                        push_result = await pusher.push(content, **push_detail)
-                        if push_result.succeed:
-                            pushing_logger.info('√')
-                        else:
-                            pushing_logger.warning(f'×: {push_result.exception}')
+                    for push in setting[getter]:
+                        try:
+                            await pushers.push_to(push, content)
+                        except Exception as e:
+                            logger.error(e)
+                            await warning.warning(Struct().text(f'Failed to push to {push}: \n{content}'))
                 else:
                     logger.debug('Skipped to push because: {}'.format(', '.join(push_passed_reason)))
             except Exception as e:
-                logger.error(f'× (process_result): {e}', exc_info=True)
+                logger.error(f'Failed when process_result: {e}', exc_info=True)
 
         for id_ in list_.copy():
             def pass_(id_):
                 if article_store.article_exists(id=id_):
                     logger.debug(f'{id_} exists. Passed')
                     return True
-                logger.info(f'+ {id_}')
+                logger.info(f'Got new article: {id_}')
                 return False
 
             if pass_(id_):
@@ -151,9 +151,15 @@ async def _refresh_worker(getter: Getter):
             await asyncio.gather(*works)
 
         logger.debug(f'Refreshing finished')
+
+        getter._number_of_consecutive_failures = 0
         getter._first = False
     except Exception as e:
-        logger.error(f'× (refreshing): {e}', exc_info=True)
-    getter._working = False
+        logger.error(f'Failed when refreshing: {e}', exc_info=True)
 
+        getter._number_of_consecutive_failures += 1
+        if getter._number_of_consecutive_failures in [2, 5, 10]:
+            await warning.warning(Struct().text(f'{getter} has failed to update {getter._number_of_consecutive_failures} times in a row.'))
+
+    getter._working = False
     return {}  # TODO: finish it
