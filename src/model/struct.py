@@ -6,18 +6,32 @@ from util import *
 
 @dataclass
 class StructElement(ABC):
-    pass
+    def __str__(self) -> str:
+        return ''
+
+    @abstractmethod
+    def asmarkdown(self) -> str:
+        pass
 
 
 @dataclass
 class StructText(StructElement):
     text: str
 
+    def __str__(self) -> str:
+        return self.text
+
+    def asmarkdown(self) -> str:
+        return self.text
+
 
 @dataclass
 class StructImage(StructElement):
     source: str
     alt: str = ''
+
+    def asmarkdown(self) -> str:
+        return f'![{self.alt}]({self.source})'
 
 
 types = {
@@ -60,20 +74,10 @@ class Struct:
         return result
 
     def __str__(self) -> str:
-        result = []
-        for element in self.content:
-            if type(element) == StructText:
-                result.append(element.text)
-        return '\n'.join(result)
+        return '\n'.join([str(element) for element in self.content])
 
     def asmarkdown(self) -> str:
-        result = []
-        for element in self.content:
-            if type(element) == StructText:
-                result.append(element.text)
-            if type(element) == StructImage:
-                result.append(f'![{element.alt}]({element.source})')
-        return '\n'.join(result)
+        return '\n'.join([element.asmarkdown() for element in self.content])
 
     @staticmethod
     def template1(

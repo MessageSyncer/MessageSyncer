@@ -1,6 +1,6 @@
 from model import *
 from util import *
-from store import article_store
+import store
 import time
 import re
 import config
@@ -117,7 +117,7 @@ async def _refresh_worker(getter: Getter):
 
         for id_ in list_.copy():
             def pass_(id_):
-                if article_store.article_exists(id=id_):
+                if store.Article.get_or_none(store.Article.id == id_):
                     logger.debug(f'{id_} exists. Passed')
                     return True
                 logger.info(f'Got new article: {id_}')
@@ -134,7 +134,7 @@ async def _refresh_worker(getter: Getter):
                 detail = await getter.details([id.replace(getter_prefix, '', 1) for id in list_])
                 detail.user_id = getter_prefix + detail.user_id
                 [
-                    article_store.store_article(_id, detail)
+                    store.Article.from_getresult(_id, detail).save(force_insert=True)
                     for _id in list_
                 ]
                 await process_result(detail, logging.getLogger(','.join(list_)))
@@ -144,7 +144,7 @@ async def _refresh_worker(getter: Getter):
             async def process_signal_article(id):
                 detail = await getter.detail(id.replace(getter_prefix, '', 1))
                 detail.user_id = getter_prefix + detail.user_id
-                article_store.store_article(id, detail)
+                store.Article.from_getresult(id, detail).save(force_insert=True)
                 await process_result(detail, logging.getLogger(id))
             for id_ in list_:
                 works.append(process_signal_article(id_))

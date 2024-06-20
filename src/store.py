@@ -1,50 +1,32 @@
-from peewee import CharField, IntegerField, Model
+from peewee import IntegerField, Model, TextField
 from model import *
 from util import *
-import config
-
-import json
 
 database_path = Path('../data') / 'database'
 database_path.mkdir(parents=True, exist_ok=True)
 main_db = SqliteDatabase(database_path / 'main.db')
 
 
-class _ArticleStore:
-    class Article(Model):
-        id = CharField(primary_key=True, null=False)
-        userId = CharField(null=False)
-        ts = IntegerField(null=False)
-        content = CharField(null=False)
+class StructField(TextField):
+    def db_value(self, value: Struct):
+        return json.dumps(value.asdict(), ensure_ascii=False)
 
-        class Meta:
-            database = main_db
-
-    def __init__(self) -> None:
-        _ArticleStore.Article.create_table()
-
-    def store_article(self, id: str, result: GetResult):
-        _ArticleStore.Article.create(id=id, userId=result.user_id, ts=result.ts, content=json.dumps(result.content.asdict(), ensure_ascii=False))
-
-    def get_article(self, id: str):
-        article = self._get_article_byid(id)
-        return GetResult(article.userId, article.ts, Struct(json.loads(article.content)))
-
-    def get_articles(self, limit: int, tsoffset: int):
-        query = _ArticleStore.Article.select().where(_ArticleStore.Article.ts < tsoffset).order_by(_ArticleStore.Article.ts.desc()).limit(limit)
-        return [
-            (article.id, GetResult(article.userId, article.ts, Struct(json.loads(article.content))))
-            for article in query
-        ]
-
-    def article_exists(self, id: str) -> bool:
-        return self._get_article_byid(id) != None
-
-    def total_count(self) -> int:
-        return _ArticleStore.Article.select().count()
-
-    def _get_article_byid(self, id: str):
-        return _ArticleStore.Article.get_or_none(_ArticleStore.Article.id == id)
+    def python_value(self, value):
+        return Struct(dict_=json.loads(value))
 
 
-article_store = _ArticleStore()
+class Article(Model):
+    id = TextField(primary_key=True, null=False)
+    userId = TextField(null=False)
+    ts = IntegerField(null=False)
+    content = StructField(null=False)
+
+    class Meta:
+        database = main_db
+
+    def from_getresult(id: str, getresult: GetResult):
+        return Article(id=id, userId=getresult.user_id, ts=getresult.ts, content=getresult.content)
+
+
+Article.create_table()
+pass

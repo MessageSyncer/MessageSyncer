@@ -3,7 +3,7 @@
 <img src="./doc/logo.png" width="150" height="">
 
 # MessageSyncer
-An asynchronous push framework.
+An full asynchronous push framework.
 
 </div>
 

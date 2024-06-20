@@ -6,10 +6,10 @@ import config
 import refresh
 import pushers
 import time
+import store
 
 from util import *
 from model import *
-from store import article_store
 from typing import Annotated, Optional
 from pydantic import BaseModel
 from fastapi import FastAPI, HTTPException, Depends, Response, Path, Header, Request
@@ -70,13 +70,10 @@ class GetterInfo():
 
 @dataclass
 class Article():
-    # content: list[Struct]
     id: str
-    text: str
-    markdown: str
-
+    userId: str
     ts: int
-    user_id: str
+    content: list
 
 
 @app.get("/")
@@ -111,20 +108,21 @@ async def refresh_getter(getter: str, auth=Depends(authenticate)):
     refresh.refresh(get_getter(getter))
 
 
-@app.post("/articles/")
-async def list_all_articles(limit: int = 10, before_ts: int = 1000000000, auth=Depends(authenticate)) -> list[Article]:
-    if before_ts == 1000000000:
-        before_ts = int(time.time())
+@app.get("/articles/")
+async def list_articles(page: int = 0, page_size: int = 10, auth=Depends(authenticate)) -> list[Article]:
     return [
-        Article(id, str(ar.content), ar.content.asmarkdown(), ar.ts, ar.user_id)
-        for id, ar in article_store.get_articles(limit, before_ts)
+        Article(ar.id, ar.userId, ar.ts, ar.content.asdict())
+        for ar in store.Article.select().order_by(store.Article.ts.desc()).paginate(page, page_size)
     ]
 
 
-@app.post("/articles/{id}")
+@app.get("/articles/{id}")
 async def article(id: str, auth=Depends(authenticate)) -> Article:
-    ar = article_store.get_article(id=id)
-    return Article(id, str(ar.content), ar.content.asmarkdown(), ar.ts, ar.user_id)
+    ar = store.Article.get_or_none(store.Article.id == id)
+    if ar:
+        return Article(id, ar.userId, ar.ts, ar.content.asdict())
+    else:
+        raise HTTPException(404, 'No corresponding article found.')
 
 
 def serve():
