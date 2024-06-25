@@ -122,7 +122,7 @@ async def article(id: str, auth=Depends(authenticate)) -> Article:
     if ar:
         return Article(id, ar.userId, ar.ts, ar.content.asdict())
     else:
-        raise HTTPException(404, 'No corresponding article found.')
+        raise HTTPException(404)
 
 
 def serve():
