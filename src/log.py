@@ -5,10 +5,21 @@ from util import *
 path = Path() / '../data' / 'log'
 path.mkdir(parents=True, exist_ok=True)
 
+log_list: list[str] = []
+
+
+class ListHandler(logging.Handler):
+    def __init__(self):
+        super().__init__()
+
+    def emit(self, record):
+        log_entry = self.format(record)
+        log_list.append(log_entry)
+
 
 def get_logging_handlers(log_name):
     import config
-    file_level = console_level = logging.DEBUG if config.verbose else logging.INFO
+    list_level = file_level = console_level = logging.DEBUG if config.verbose else logging.INFO
     log_file = path / f'{log_name}.log'
     format = '%(asctime)s[%(levelname)s][%(name)s] %(message)s'
 
@@ -25,6 +36,10 @@ def get_logging_handlers(log_name):
     file_handler.setLevel(file_level)
     file_handler.setFormatter(logging.Formatter(format))
 
+    list_handler = ListHandler()
+    list_handler.setLevel(list_level)
+    list_handler.setFormatter(logging.Formatter(format))
+
     console_handler = colorlog.StreamHandler()
     console_handler.setLevel(console_level)
     console_handler.setFormatter(colorlog.ColoredFormatter(
@@ -38,7 +53,7 @@ def get_logging_handlers(log_name):
         }
     ))
 
-    return [file_handler, console_handler]
+    return [file_handler, console_handler, list_handler]
 
 
 def adjust_log_file(log_file):
@@ -50,7 +65,5 @@ def adjust_log_file(log_file):
             log_file.rename(log_backup_file)
 
 
-[logging.getLogger(name).setLevel(logging.INFO) for name in ('peewee', 'asyncio', 'tzlocal', 'PIL.Image')]
+# [logging.getLogger(name).setLevel(logging.INFO) for name in ('peewee', 'asyncio', 'tzlocal', 'PIL.Image')]
 logging.basicConfig(level=logging.DEBUG, handlers=get_logging_handlers('root'))
-
-root = logging.root

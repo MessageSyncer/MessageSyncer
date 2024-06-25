@@ -125,11 +125,19 @@ async def article(id: str, auth=Depends(authenticate)) -> Article:
         raise HTTPException(404)
 
 
-def serve():
-    server = uvicorn.Server(uvicorn.Config(app, host=HOST, port=PORT, log_level='info', log_config={ "version": 1, "disable_existing_loggers": False, "formatters": {}, "handlers": {}, "loggers": { "uvicorn": {"handlers": [], "level": "INFO", "propagate": False}, "uvicorn.error": {"handlers": [], "level": "INFO", "propagate": False}, "uvicorn.access": {"handlers": [], "level": "INFO", "propagate": False}, }, }))
+@app.get("/log/")
+async def list_log(page: int = 0, page_size: int = 10, auth=Depends(authenticate)) -> list[str]:
+    data_list = log.log_list
+    start_index = max(0, len(data_list) - (page + 1) * page_size)
+    end_index = len(data_list) - page * page_size
+    return data_list[start_index:end_index]
 
-    logging.getLogger('uvicorn').handlers = log.root.handlers
-    logging.getLogger('uvicorn.error').handlers = log.root.handlers
+
+def serve():
+    server = uvicorn.Server(uvicorn.Config(app, host=HOST, port=PORT, log_level='info', log_config={"version": 1, "disable_existing_loggers": False, "formatters": {}, "handlers": {}, "loggers": {"uvicorn": {"handlers": [], "level": "INFO", "propagate": False}, "uvicorn.error": {"handlers": [], "level": "INFO", "propagate": False}, "uvicorn.access": {"handlers": [], "level": "INFO", "propagate": False}, }, }))
+
+    logging.getLogger('uvicorn').handlers = logging.root.handlers
+    logging.getLogger('uvicorn.error').handlers = logging.root.handlers
     logging.getLogger('uvicorn.error').name = 'uvicorn'
-    logging.getLogger('uvicorn.access').handlers = log.root.handlers
+    logging.getLogger('uvicorn.access').handlers = logging.root.handlers
     asyncio.create_task(server.serve())
