@@ -29,17 +29,17 @@ VERSION = 20240602
 
 @app.exception_handler(Exception)
 async def generic_exception_handler(request: Request, exc: Exception):
-    return JSONResponse(status_code=500, content={"detail": 'Internal server error'})
+    return JSONResponse(status_code=500, content='Internal server error')
 
 
 @app.exception_handler(HTTPException)
 async def generic_exception_handler(request: Request, exc: HTTPException):
-    return JSONResponse(status_code=exc.status_code, content={"detail": exc.detail})
+    return JSONResponse(status_code=exc.status_code, content=exc.detail)
 
 
 def authenticate(credentials: HTTPAuthorizationCredentials = Depends(HTTPBearer())):
     if not credentials.credentials in config.main_manager.value.api.token:
-        raise HTTPException(403, 'Invalid token')
+        raise HTTPException(403)
     return True
 
 
@@ -47,14 +47,14 @@ def get_getter(getter_str: str) -> Getter:
     ls = [_getter for _getter in refresh.setting if _getter.name == getter_str]
     if len(ls) != 0:
         return ls
-    raise HTTPException(404, 'The specified pusher does not exist.')
+    raise HTTPException(404)
 
 
 def get_pusher(pusher_str: str) -> Pusher:
     ls = [_pusher for _pusher in pushers.pushers_inited if _pusher.name == pusher_str]
     if len(ls) != 0:
         return ls
-    raise HTTPException(404, 'The specified getter does not exist.')
+    raise HTTPException(404)
 
 
 @dataclass
@@ -126,17 +126,7 @@ async def article(id: str, auth=Depends(authenticate)) -> Article:
 
 
 def serve():
-    server = uvicorn.Server(uvicorn.Config(app, host=HOST, port=PORT, log_level='info', log_config={
-        "version": 1,
-        "disable_existing_loggers": False,
-        "formatters": {},
-        "handlers": {},
-        "loggers": {
-            "uvicorn": {"handlers": [], "level": "INFO", "propagate": False},
-            "uvicorn.error": {"handlers": [], "level": "INFO", "propagate": False},
-            "uvicorn.access": {"handlers": [], "level": "INFO", "propagate": False},
-        },
-    }))
+    server = uvicorn.Server(uvicorn.Config(app, host=HOST, port=PORT, log_level='info', log_config={ "version": 1, "disable_existing_loggers": False, "formatters": {}, "handlers": {}, "loggers": { "uvicorn": {"handlers": [], "level": "INFO", "propagate": False}, "uvicorn.error": {"handlers": [], "level": "INFO", "propagate": False}, "uvicorn.access": {"handlers": [], "level": "INFO", "propagate": False}, }, }))
 
     logging.getLogger('uvicorn').handlers = log.root.handlers
     logging.getLogger('uvicorn.error').handlers = log.root.handlers
