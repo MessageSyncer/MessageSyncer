@@ -113,6 +113,7 @@ class MainConfig:
         to: list[str] = field(default_factory=list[str])
 
     pair: list[str] = field(default_factory=list[str])
+    url: dict[str,str] = field(default_factory=dict[str, str])
     warning: Warning = field(default_factory=Warning)
     logging: LoggingConfig = field(default_factory=LoggingConfig)
     api: APIConfig = field(default_factory=APIConfig)

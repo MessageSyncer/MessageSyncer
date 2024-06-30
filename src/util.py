@@ -5,6 +5,7 @@ import requests
 import logging
 import colorlog
 import importlib
+import subprocess
 import sys
 import asyncio
 from PIL import Image
@@ -12,6 +13,39 @@ from pathlib import Path
 from peewee import SqliteDatabase
 from urllib.parse import urlparse
 from unittest.mock import patch
+
+
+def clone_from_vcs(string: str, path: Path, folder_name: str):
+    logging.info(f"Cloning {string}...")
+
+    parts = string.split('+', 1)
+    if len(parts) == 2:
+        vcs = parts[0]
+        url = parts[1]
+    elif len(parts) == 1:
+        vcs = 'git'
+        url = parts[0]
+    else:
+        raise ValueError("Invalid vcs source format")
+
+    target_path = path / folder_name
+
+    if vcs == 'git':
+        command = ['git', 'clone', url, str(target_path)]
+    elif vcs == 'svn':
+        command = ['svn', 'checkout', url, str(target_path)]
+    elif vcs == 'hg':
+        command = ['hg', 'clone', url, str(target_path)]
+    elif vcs == 'bzr':
+        command = ['bzr', 'branch', url, str(target_path)]
+    else:
+        raise ValueError(f"Unsupported VCS: {vcs}")
+
+    try:
+        subprocess.run(command, check=True)
+        logging.info(f"Cloned {vcs} repository from {url} to {target_path}")
+    except subprocess.CalledProcessError as e:
+        raise Exception(f"Error cloning repository: {e}")
 
 
 def import_all_to_dict(path: Path) -> dict:

@@ -5,15 +5,27 @@ pushers_inited: list[Pusher] = []
 path = Path() / 'pushers'
 
 
-def get_pusher(pusher) -> tuple[Pusher, dict]:
-    _pusher = pusher.rsplit('.', 1)
+class PusherNotFoundException(Exception):
+    pass
+
+
+def parse_pusher(pusher):
+    _pusher = pusher.split('.', 2)
     pusher = _pusher[0]
-    pusher_to = _pusher[1]
-    if matched := [_pusher for _pusher in pushers_inited if _pusher.name == pusher]:
+    pusher_id = _pusher[1]
+    pusher_to = _pusher[2]
+    return pusher, pusher_id, pusher_to
+
+
+def get_pusher(pusher) -> tuple[Pusher, dict]:
+    pusher_class, pusher_id, pusher_to = parse_pusher(pusher)
+    if matched := [_pusher for _pusher in pushers_inited if _pusher.name == f'{pusher_class}.{pusher_id}']:
         pusher = matched[0]
     else:
-        pusher = pusher.split('.')
-        pusher = import_all_to_dict(path)[pusher[0]](pusher[1])
+        try:
+            pusher = import_all_to_dict(path)[pusher_class](pusher_id)
+        except KeyError:
+            raise PusherNotFoundException()
         pushers_inited.append(pusher)
 
         logging.debug(f'{pusher} initialized')
