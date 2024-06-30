@@ -36,7 +36,7 @@ async def block_refresh(getter: Getter):
 
 async def register_all_trigger():
     for getter in setting:
-        for trigger in getter.config['trigger']:
+        for trigger in getter.config.get('trigger', []):
             register_corn(getter, trigger)
         if config.main.refresh_when_start:
             refresh(getter)
