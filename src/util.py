@@ -15,7 +15,20 @@ from urllib.parse import urlparse
 from unittest.mock import patch
 
 
-def clone_from_vcs(string: str, path: Path, folder_name: str):
+def install_requirements(path: Path):
+    # Check if requirements.txt exists
+    requirements_file = path / 'requirements.txt'
+    if not requirements_file.exists():
+        return
+
+    # Use subprocess to call pip to install dependencies
+    try:
+        subprocess.check_call(['pip', 'install', '-r', str(requirements_file)])
+    except subprocess.CalledProcessError as e:
+        print(f"Installation for requirements.txt failed: {e}")
+
+
+def clone_from_vcs(string: str, path: Path):
     logging.info(f"Cloning {string}...")
 
     parts = string.split('+', 1)
@@ -28,7 +41,7 @@ def clone_from_vcs(string: str, path: Path, folder_name: str):
     else:
         raise ValueError("Invalid vcs source format")
 
-    target_path = path / folder_name
+    target_path = path
 
     if vcs == 'git':
         command = ['git', 'clone', url, str(target_path)]

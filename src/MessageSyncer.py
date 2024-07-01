@@ -17,13 +17,17 @@ def get_adapter(getter=None, pusher=None):
             getters.get_getter(getter)
         except getters.GetterNotFoundException as e:
             getter_class, _ = getters.parse_getter(getter)
-            clone_from_vcs(config.main.url.get(getter_class, f'https://github.com/MessageSyncer/{getter_class}'), getters.path, getter_class)
+            path = getters.path/getter_class
+            clone_from_vcs(config.main.url.get(getter_class, f'https://github.com/MessageSyncer/{getter_class}'), path)
+            install_requirements(path)
     if pusher:
         try:
             pushers.get_pusher(pusher)
         except pushers.PusherNotFoundException as e:
             pusher_class, _, _ = pushers.parse_pusher(pusher)
-            clone_from_vcs(config.main.url.get(pusher_class, f'https://github.com/MessageSyncer/{pusher_class}'), pushers.path, pusher_class)
+            path = pushers.path/pusher_class
+            clone_from_vcs(config.main.url.get(pusher_class, f'https://github.com/MessageSyncer/{pusher_class}'), path)
+            install_requirements(path)
 
 
 async def main():
