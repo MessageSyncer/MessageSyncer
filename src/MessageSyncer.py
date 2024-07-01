@@ -47,5 +47,5 @@ async def main():
         await asyncio.sleep(3600)
 
 if __name__ == '__main__':
-    logging.info('Started')
+    logging.info('MessageSyncer started')
     asyncio.run(main())

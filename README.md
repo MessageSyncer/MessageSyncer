@@ -7,5 +7,12 @@ An full asynchronous push framework.
 
 </div>
 
-> [!NOTE]
-> This project is under construction.
+## Usage
+1. `git clone`
+1. `cd src`
+1. `python MessageSyncer.py`
+
+## Develop
+- Template for adapters:
+    - https://github.com/MessageSyncer/TestGetter
+    - https://github.com/MessageSyncer/TestPusher
