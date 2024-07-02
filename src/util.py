@@ -25,7 +25,7 @@ def install_requirements(path: Path):
     try:
         subprocess.check_call(['pip', 'install', '-r', str(requirements_file)])
     except subprocess.CalledProcessError as e:
-        print(f"Installation for requirements.txt failed: {e}")
+        logging.warning(f"Installation for requirements.txt failed: {e}")
 
 
 def clone_from_vcs(string: str, path: Path):
