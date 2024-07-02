@@ -33,7 +33,7 @@ class Adapter(ABC, Generic[TADAPTERCONFIG, TADAPTERINSTANCECONFIG]):
         self.class_name = self.__class__.__name__
         self.name = self.class_name
 
-        if id:
+        if id != None:
             self.name += f'.{id}'
 
         _generic_params = self._get_generic_params()
