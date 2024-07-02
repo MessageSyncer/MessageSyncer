@@ -84,6 +84,17 @@ async def hello_world() -> dict:
     })
 
 
+@router.post("/pairs/")
+async def create_new_pair(pairs: list[str], auth=Depends(authenticate)):
+    [
+        await refresh.register_pair(pair)
+        for pair in pairs
+    ]
+    _config = config.main_manager.value
+    _config.pair.extend(pairs)
+    config.main_manager.save(_config)
+
+
 @router.get("/getters/")
 async def list_all_getters(auth=Depends(authenticate)) -> list[GetterInfo]:
     return [
