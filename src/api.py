@@ -12,19 +12,20 @@ from util import *
 from model import *
 from typing import Annotated, Optional
 from pydantic import BaseModel
-from fastapi import FastAPI, HTTPException, Depends, Response, Path, Header, Request
+from fastapi import FastAPI, HTTPException, Depends, APIRouter, Response, Path, Header, Request
 from fastapi.responses import JSONResponse
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 
 app = FastAPI()
+router = APIRouter(prefix='/api')
 HOST = '0.0.0.0'
 PORT = config.main.api.port
 
 # Update this field every time when a destructive update is made.
 # If a destructive update is made, use this field to control the response model of API.
-# [20240602]
-VERSION = 20240602
+# [20240702]
+VERSION = 20240702
 
 
 @app.exception_handler(Exception)
@@ -76,14 +77,14 @@ class Article():
     content: list
 
 
-@app.get("/")
+@router.get("/")
 async def hello_world() -> dict:
     return JSONResponse({
         "version": VERSION
     })
 
 
-@app.get("/getters/")
+@router.get("/getters/")
 async def list_all_getters(auth=Depends(authenticate)) -> list[GetterInfo]:
     return [
         asdict(GetterInfo(name=getter.name, class_name=getter.class_name, working=getter._working, config=getter.config, instance_config=getter.instance_config))
@@ -91,24 +92,24 @@ async def list_all_getters(auth=Depends(authenticate)) -> list[GetterInfo]:
     ]
 
 
-@app.post("/getters/refresh", response_model=type(None))
+@router.post("/getters/refresh", response_model=type(None))
 async def refresh_getters(auth=Depends(authenticate)):
     for getter in refresh.setting:
         refresh.refresh(getter)
 
 
-@app.get("/getters/{getter:str}")
+@router.get("/getters/{getter:str}")
 async def getter(getter: str, auth=Depends(authenticate)) -> GetterInfo:
     _getter = get_getter(getter)
     return asdict(GetterInfo(name=_getter.name, class_name=_getter.class_name, working=_getter._working, config=_getter.config, instance_config=_getter.instance_config))
 
 
-@app.post("/getters/{getter:str}/refresh", response_model=type(None))
+@router.post("/getters/{getter:str}/refresh", response_model=type(None))
 async def refresh_getter(getter: str, auth=Depends(authenticate)):
     refresh.refresh(get_getter(getter))
 
 
-@app.get("/articles/")
+@router.get("/articles/")
 async def list_articles(page: int = 0, page_size: int = 10, auth=Depends(authenticate)) -> list[Article]:
     return [
         Article(ar.id, ar.userId, ar.ts, ar.content.asdict())
@@ -116,7 +117,7 @@ async def list_articles(page: int = 0, page_size: int = 10, auth=Depends(authent
     ]
 
 
-@app.get("/articles/{id}")
+@router.get("/articles/{id}")
 async def article(id: str, auth=Depends(authenticate)) -> Article:
     ar = store.Article.get_or_none(store.Article.id == id)
     if ar:
@@ -125,12 +126,14 @@ async def article(id: str, auth=Depends(authenticate)) -> Article:
         raise HTTPException(404)
 
 
-@app.get("/log/")
+@router.get("/log/")
 async def list_log(page: int = 0, page_size: int = 10, auth=Depends(authenticate)) -> list[str]:
     data_list = log.log_list
     start_index = max(0, len(data_list) - (page + 1) * page_size)
     end_index = len(data_list) - page * page_size
     return data_list[start_index:end_index]
+
+app.include_router(router)
 
 
 def serve():
