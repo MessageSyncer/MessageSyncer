@@ -8,8 +8,9 @@ import asyncio
 import threading
 import aiocron
 import network
-import pushers
 import warning
+import getters
+import pushers
 
 setting: dict[Getter, list[str]] = {}
 
@@ -34,12 +35,45 @@ async def block_refresh(getter: Getter):
     return result
 
 
-async def register_all_trigger():
-    for getter in setting:
-        for trigger in getter.config.get('trigger', []):
-            register_corn(getter, trigger)
-        if config.main.refresh_when_start:
-            refresh(getter)
+def get_adapter(getter=None, pusher=None):
+    if getter:
+        try:
+            getters.get_getter(getter)
+        except getters.GetterNotFoundException as e:
+            getter_class, _ = getters.parse_getter(getter)
+            path = getters.path/getter_class
+            clone_from_vcs(config.main.url.get(getter_class, f'https://github.com/MessageSyncer/{getter_class}'), path)
+            install_requirements(path)
+    if pusher:
+        try:
+            pushers.get_pusher(pusher)
+        except pushers.PusherNotFoundException as e:
+            pusher_class, _, _ = pushers.parse_pusher(pusher)
+            path = pushers.path/pusher_class
+            clone_from_vcs(config.main.url.get(pusher_class, f'https://github.com/MessageSyncer/{pusher_class}'), path)
+            install_requirements(path)
+
+
+async def register_pair(pair_str):
+    pair_str: str
+    pair_str = pair_str.split(' ', 1)
+
+    get_adapter(pair_str[0], pair_str[1])
+
+    getter = getters.get_getter(pair_str[0])
+    push_detail = pair_str[1]
+
+    logging.debug(f'Distribute {push_detail} to {getter}')
+    setting.setdefault(getter, []).append(push_detail)
+
+    await register_all_trigger(getter)
+
+
+async def register_all_trigger(getter: Getter):
+    for trigger in getter.config.get('trigger', []):
+        register_corn(getter, trigger)
+    if config.main.refresh_when_start:
+        refresh(getter)
 
 
 def register_corn(getter: Getter, trigger: str):
