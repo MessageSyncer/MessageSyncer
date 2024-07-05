@@ -13,7 +13,7 @@ from model import *
 from typing import Annotated, Optional
 from pydantic import BaseModel
 from fastapi import FastAPI, HTTPException, Depends, APIRouter, Response, Path, Header, Request
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, RedirectResponse
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 
@@ -76,6 +76,9 @@ class Article():
     ts: int
     content: list
 
+@app.get("/")
+async def _():
+    return RedirectResponse('./docs')
 
 @router.get("/")
 async def hello_world() -> dict:
