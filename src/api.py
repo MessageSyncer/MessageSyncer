@@ -17,7 +17,7 @@ from fastapi.responses import JSONResponse, RedirectResponse
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 
-app = FastAPI()
+app = FastAPI(title='MessageSyncerAPI')
 router = APIRouter(prefix='/api')
 HOST = '0.0.0.0'
 PORT = config.main.api.port
@@ -76,9 +76,11 @@ class Article():
     ts: int
     content: list
 
-@app.get("/")
+
+@app.get("/", include_in_schema=False)
 async def _():
     return RedirectResponse('./docs')
+
 
 @router.get("/")
 async def hello_world() -> dict:
