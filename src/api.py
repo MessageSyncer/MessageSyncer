@@ -47,7 +47,7 @@ def authenticate(credentials: HTTPAuthorizationCredentials = Depends(HTTPBearer(
 def get_getter(getter_str: str) -> Getter:
     ls = [_getter for _getter in refresh.setting if _getter.name == getter_str]
     if len(ls) != 0:
-        return ls
+        return ls[0]
     raise HTTPException(404)
 
 
