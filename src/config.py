@@ -110,6 +110,7 @@ class MainConfig:
     @dataclass
     class Warning:
         to: list[str] = field(default_factory=list[str])
+        consecutive_getter_failures_number_to_trigger_warning: list[int] = field(default_factory=lambda: [2, 5, 10])
 
     pair: list[str] = field(default_factory=list[str])
     url: dict[str, str] = field(default_factory=dict[str, str])

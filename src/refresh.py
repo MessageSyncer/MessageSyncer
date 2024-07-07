@@ -194,7 +194,7 @@ async def _refresh_worker(getter: Getter):
         logger.error(f'Failed when refreshing: {e}', exc_info=True)
 
         getter._number_of_consecutive_failures += 1
-        if getter._number_of_consecutive_failures in [2, 5, 10]:
+        if getter._number_of_consecutive_failures in config.main_manager.value.warning.consecutive_getter_failures_number_to_trigger_warning:
             await warning.warning(Struct().text(f'{getter} has failed to update {getter._number_of_consecutive_failures} times in a row.'))
 
     getter._working = False
