@@ -3,16 +3,18 @@
 <img src="./doc/logo.png" width="150" height="">
 
 # MessageSyncer
-An full asynchronous push framework.
+An fully asynchronous push framework.
 
 </div>
 
+## Feature
+- Fully asynchronous
+- Low performance-overhead
+- Hot-reload
+- Easy to develop
+
 ## Usage
-1. `git clone`
-1. `cd src`
-1. `python MessageSyncer.py`
+[Get Started](./doc/start.md)
 
 ## Develop
-- Template for adapters:
-    - https://github.com/MessageSyncer/TestGetter
-    - https://github.com/MessageSyncer/TestPusher
+[Developing Guide](./doc/dev.md)
