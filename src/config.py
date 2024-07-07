@@ -116,7 +116,12 @@ class MainConfig:
     warning: Warning = field(default_factory=Warning)
     logging: LoggingConfig = field(default_factory=LoggingConfig)
     api: APIConfig = field(default_factory=APIConfig)
+
+    # Pre-refresh is performed when Getter is registered, and the results obtained from this refresh will not be pushed.
+    # The recommendation is True.
+    # When it is False and it has been a long time since the last MessageSynser refresh, it is recommended to manually perform a refresh after MessageSynser is started.
     refresh_when_start: bool = True
+
     first_get_donot_push: bool = True
     block: list[str] = field(default_factory=list[str])
     perf_merged_details: bool = True
