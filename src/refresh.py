@@ -66,7 +66,11 @@ async def register_pair(pair_str):
     logging.debug(f'Distribute {push_detail} to {getter}')
     setting.setdefault(getter, []).append(push_detail)
 
-    await register_all_trigger(getter)
+    if getter in setting.keys():
+        setting[getter].append(push_detail)
+    else:
+        setting[getter] = []
+        await register_all_trigger(getter)
 
 
 async def register_all_trigger(getter: Getter):
