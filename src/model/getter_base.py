@@ -1,5 +1,5 @@
 from .base import *
-from typing import List
+from typing import List, Union
 import aiocron
 
 
@@ -17,7 +17,7 @@ class GetterConfig(AdapterConfig):
 
 @dataclass
 class GetterInstanceConfig(AdapterInstanceConfig):
-    pass
+    override_trigger: Union[list[str], None] = field(default=None)
 
 
 class Getter(Adapter[TADAPTERCONFIG, TADAPTERINSTANCECONFIG], Generic[TADAPTERCONFIG, TADAPTERINSTANCECONFIG]):
@@ -54,7 +54,7 @@ class Getter(Adapter[TADAPTERCONFIG, TADAPTERINSTANCECONFIG], Generic[TADAPTERCO
         """
         pass
 
-    async def details(self, ids: List[str]) -> GetResult: 
+    async def details(self, ids: List[str]) -> GetResult:
         """Get detail of list of ids. Often used to merge multiple ids into a single message.
 
         Args:

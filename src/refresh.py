@@ -64,7 +64,6 @@ async def register_pair(pair_str):
     push_detail = pair_str[1]
 
     logging.debug(f'Distribute {push_detail} to {getter}')
-    setting.setdefault(getter, []).append(push_detail)
 
     if getter in setting.keys():
         setting[getter].append(push_detail)
@@ -74,7 +73,12 @@ async def register_pair(pair_str):
 
 
 async def register_all_trigger(getter: Getter):
-    for trigger in getter.config.get('trigger', []):
+    triggers = getter.config.get('trigger', [])
+    override_triggers = getter.instance_config.get('override_trigger', None)
+    if override_triggers != None:
+        triggers = override_triggers
+
+    for trigger in triggers:
         register_corn(getter, trigger)
     if config.main.refresh_when_start:
         refresh(getter)
