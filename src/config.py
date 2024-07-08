@@ -12,6 +12,9 @@ class HotReloadConfigManager(Generic[T]):
         self.config_type = config_type
         self.config_path = config_path
 
+        if not self.config_path.exists():
+            self.save(self.config_type())
+
     def allow_dict_access(data_type):
         """
         The shift from using dict as the profile type to using dataclass as the profile type is a disruptive change from Pusher to MessageSyncer.
