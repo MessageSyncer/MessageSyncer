@@ -38,14 +38,14 @@ class Adapter(ABC, Generic[TADAPTERCONFIG, TADAPTERINSTANCECONFIG]):
 
         _generic_params = self._get_generic_params()
 
-        def _process_type(_i, _T, default):
+        def _process_type(_i, _T):
             _t = _generic_params[_i]
             if _t == _T:
-                _t = default
+                _t = dict
             return _t
 
-        self._config = get_config_manager(_process_type(0, TADAPTERCONFIG, self.__configtype__), self.class_name)
-        self._instance_config = get_config_manager(_process_type(1, TADAPTERINSTANCECONFIG, self.__instanceconfigtype__), self.name)
+        self._config = get_config_manager(_process_type(0, TADAPTERCONFIG), self.class_name)
+        self._instance_config = get_config_manager(_process_type(1, TADAPTERINSTANCECONFIG), self.name)
 
         self.logger = logging.getLogger(self.name)
 

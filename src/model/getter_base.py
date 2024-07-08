@@ -21,11 +21,6 @@ class GetterInstanceConfig(AdapterInstanceConfig):
 
 
 class Getter(Adapter[TADAPTERCONFIG, TADAPTERINSTANCECONFIG], Generic[TADAPTERCONFIG, TADAPTERINSTANCECONFIG]):
-    # TODO: When any class inherits from this class and the second generic is not filled, the default should be GetterInstanceConfig
-
-    __configtype__ = GetterConfig
-    __instanceconfigtype__ = GetterInstanceConfig
-
     def __init__(self, id=None) -> None:
         super().__init__(id)
 
