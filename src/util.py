@@ -1,4 +1,5 @@
 import base64
+import shutil
 import json
 import yaml
 import requests
@@ -42,6 +43,9 @@ def clone_from_vcs(string: str, path: Path):
         raise ValueError("Invalid vcs source format")
 
     target_path = path
+    if target_path.exists():
+        if target_path.is_dir():
+            shutil.rmtree(target_path)
 
     if vcs == 'git':
         command = ['git', 'clone', url, str(target_path)]
