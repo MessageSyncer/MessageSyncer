@@ -80,7 +80,7 @@ async def register_all_trigger(getter: Getter):
 
     for trigger in triggers:
         register_corn(getter, trigger)
-    if config.main.refresh_when_start:
+    if config.main_manager.value.refresh_when_start:
         refresh(getter)
     else:
         getter._first = False
@@ -138,11 +138,11 @@ async def _refresh_worker(getter: Getter):
                 push_passed_reason = []
 
                 if getter._first:
-                    if config.main.first_get_donot_push:
+                    if config.main_manager.value.first_get_donot_push:
                         push = False
                         push_passed_reason.append('first_get_donot_push')
 
-                for rule in config.main.block:
+                for rule in config.main_manager.value.block:
                     if re.match(rule, content_text) or re.search(rule, content_text):
                         push = False
                         push_passed_reason.append(f'triggers block "{rule}"')
@@ -171,7 +171,7 @@ async def _refresh_worker(getter: Getter):
                 list_.remove(id_)
 
         try:
-            if not config.main.perf_merged_details:
+            if not config.main_manager.value.perf_merged_details:
                 raise NotImplementedError()
 
             if list_:
