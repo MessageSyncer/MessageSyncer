@@ -82,8 +82,6 @@ async def register_all_trigger(getter: Getter):
         register_corn(getter, trigger)
     if config.main_manager.value.refresh_when_start:
         refresh(getter)
-    else:
-        getter._first = False
 
 
 def register_corn(getter: Getter, trigger: str):
