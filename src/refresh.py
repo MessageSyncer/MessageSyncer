@@ -68,7 +68,7 @@ async def register_pair(pair_str):
     if getter in setting.keys():
         setting[getter].append(push_detail)
     else:
-        setting[getter] = []
+        setting[getter] = [push_detail]
         await register_all_trigger(getter)
 
 
