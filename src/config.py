@@ -68,7 +68,7 @@ class HotReloadConfigManager(Generic[T]):
         return dict_config
 
     def asyaml(self, config):
-        return yaml.safe_dump(self.asdict(config))
+        return yaml.dump(self.asdict(config), default_flow_style=False, encoding='utf-8', allow_unicode=True).decode('utf-8')
 
     def save(self, config):
         write_file(self.config_path, self.asyaml(config))
@@ -82,7 +82,7 @@ class HotReloadConfigManager(Generic[T]):
         return config
 
     def dict(self):
-        return yaml.safe_load(self.yaml())
+        return yaml.load(self.yaml(), Loader=yaml.FullLoader)
 
     @property
     def value(self) -> T:
