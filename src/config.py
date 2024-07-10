@@ -115,8 +115,8 @@ class MainConfig:
         to: list[str] = field(default_factory=list[str])
         consecutive_getter_failures_number_to_trigger_warning: list[int] = field(default_factory=lambda: [2, 5, 10])
 
-    pair: list[str] = field(default_factory=list[str])
-    url: dict[str, str] = field(default_factory=dict[str, str])
+    pair: list[str] = field(default_factory=list[str]) # list of pair
+    url: dict[str, str] = field(default_factory=dict[str, str]) # url of Adapter. Such as `git+https://github.com/user/repo`
     warning: Warning = field(default_factory=Warning)
     logging: LoggingConfig = field(default_factory=LoggingConfig)
     api: APIConfig = field(default_factory=APIConfig)
