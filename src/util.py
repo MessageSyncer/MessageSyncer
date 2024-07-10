@@ -16,6 +16,14 @@ from urllib.parse import urlparse
 from unittest.mock import patch
 
 
+def generate_function_call(function, *args, **kwargs):
+    funcname = function.__name__
+    args_str = ", ".join(repr(arg) for arg in args)
+    kwargs_str = ", ".join(f"{key}={repr(value)}" for key, value in kwargs.items())
+    all_args_str = ", ".join(filter(None, [args_str, kwargs_str]))
+    return f"{funcname}({all_args_str})"
+
+
 def install_requirements(path: Path):
     # Check if requirements.txt exists
     requirements_file = path / 'requirements.txt'

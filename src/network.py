@@ -1,6 +1,8 @@
 import util
 import requests
 import config
+import logging
+from datetime import datetime
 
 
 def _process_proxy(dict_: dict):
@@ -9,16 +11,25 @@ def _process_proxy(dict_: dict):
 
 
 def _requests_method_wrapper(origin):
+    network_logger = logging.getLogger('requests_proxy')
+
     def new_method(*args, **kwargs):
         kwargs = _process_proxy(kwargs)
+        logger = network_logger.getChild(util.generate_function_call(origin, *args, **kwargs))
 
         max_retry_time = 2
         for i in range(max_retry_time):
             try:
-                return origin(*args, **kwargs)
-            except:
-                if i == max_retry_time-1:
-                    raise
+                start_time = datetime.now()
+                logger.debug(f'Trying to request ({i+1}/{max_retry_time})')
+                result = origin(*args, **kwargs)
+                end_time = datetime.now()
+                logger.debug(f'Request finished, cost: {(end_time-start_time).total_seconds()} s')
+                return result
+            except Exception as e:
+                logger.warning(e)
+                if i+1 == max_retry_time:
+                    raise e
     return new_method
 
 
