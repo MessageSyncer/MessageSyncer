@@ -45,7 +45,10 @@ class Adapter(ABC, Generic[TADAPTERCONFIG, TADAPTERINSTANCECONFIG]):
             return _t
 
         self._config = get_config_manager(_process_type(0, TADAPTERCONFIG), self.class_name)
-        self._instance_config = get_config_manager(_process_type(1, TADAPTERINSTANCECONFIG), self.name)
+        if self.id != None:
+            self._instance_config = get_config_manager(_process_type(1, TADAPTERINSTANCECONFIG), self.name)
+        else:
+            self._instance_config = None
 
         self.logger = logging.getLogger(self.name)
 
@@ -55,7 +58,10 @@ class Adapter(ABC, Generic[TADAPTERCONFIG, TADAPTERINSTANCECONFIG]):
 
     @property
     def instance_config(self) -> TADAPTERINSTANCECONFIG:
-        return self._instance_config.value
+        if self._instance_config != None:
+            return self._instance_config.value
+        else:
+            return {}
 
     def __str__(self) -> str:
         return self.name
