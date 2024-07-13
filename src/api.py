@@ -45,7 +45,7 @@ def authenticate(credentials: HTTPAuthorizationCredentials = Depends(HTTPBearer(
 
 
 def get_getter(getter_str: str) -> Getter:
-    ls = [_getter for _getter in refresh.setting if _getter.name == getter_str]
+    ls = [_getter for _getter in refresh.registered_pairs if _getter.name == getter_str]
     if len(ls) != 0:
         return ls[0]
     raise HTTPException(404)
@@ -104,14 +104,14 @@ async def create_new_pair(pairs: list[str], auth=Depends(authenticate)):
 async def list_all_getters(auth=Depends(authenticate)) -> list[GetterInfo]:
     return [
         asdict(GetterInfo(name=getter.name, class_name=getter.class_name, working=getter._working, config=getter.config, instance_config=getter.instance_config))
-        for getter in refresh.setting
+        for getter in refresh.registered_pairs
     ]
 
 
 @router.post("/getters/refresh", response_model=type(None))
 async def refresh_getters(auth=Depends(authenticate)):
-    for getter in refresh.setting:
-        refresh.refresh(getter)
+    for getter in refresh.registered_pairs:
+        asyncio.create_task(refresh.refresh(getter))
 
 
 @router.get("/getters/{getter:str}")
@@ -122,7 +122,7 @@ async def getter(getter: str, auth=Depends(authenticate)) -> GetterInfo:
 
 @router.post("/getters/{getter:str}/refresh", response_model=type(None))
 async def refresh_getter(getter: str, auth=Depends(authenticate)):
-    refresh.refresh(get_getter(getter))
+    asyncio.create_task(refresh.refresh(get_getter(getter)))
 
 
 @router.get("/articles/")

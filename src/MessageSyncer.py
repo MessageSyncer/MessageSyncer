@@ -10,6 +10,7 @@ import api
 
 
 async def main():
+    refresh.main_event_loop = asyncio.get_event_loop()
     for pair in config.main.pair:
         await refresh.register_pair(pair)
 
