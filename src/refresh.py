@@ -85,24 +85,24 @@ def fresh_trigger(getter: Getter):
 def register_corn(getter: Getter, trigger: str):
     cron = aiocron.crontab(trigger, refresh, (getter,), start=True, loop=main_event_loop)
     getter._triggers[trigger] = cron
-    logging.debug(f'{getter} registered: {trigger}')
+    getter.logger.debug(f'Registered: {trigger}')
     return cron
 
 
 def unregister_corn(getter: Getter, trigger: str):
     stop_corn(getter, trigger)
     getter._triggers.pop(trigger)
-    logging.debug(f'{getter} unregistered: {trigger}')
+    getter.logger.debug(f'Unregistered: {trigger}')
 
 
 def start_corn(getter: Getter, trigger: str):
     getter._triggers[trigger].start()
-    logging.debug(f'{getter} trigger started: {trigger}')
+    getter.logger.debug(f'Trigger started: {trigger}')
 
 
 def stop_corn(getter: Getter, trigger: str):
     getter._triggers[trigger].stop()
-    logging.debug(f'{getter} trigger stopped: {trigger}')
+    getter.logger.debug(f'Trigger stopped: {trigger}')
 
 
 async def _refresh_worker(getter: Getter):
