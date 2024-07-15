@@ -17,15 +17,17 @@ main_event_loop = None
 
 
 async def refresh(getter: Getter):
-    result = {}
+    loop = asyncio.get_running_loop()
 
     def thread_worker():
         with network.force_proxies_patch():
-            result.clear()
-            result.update(asyncio.run(_refresh_worker(getter)))
-    thread = threading.Thread(target=thread_worker)
-    thread.start()
-    thread.join()
+            future = asyncio.run_coroutine_threadsafe(_refresh_worker(getter), loop)
+            result_data = future.result()
+            return result_data
+
+    with ThreadPoolExecutor() as executor:
+        result = await loop.run_in_executor(executor, thread_worker)
+
     return result
 
 
