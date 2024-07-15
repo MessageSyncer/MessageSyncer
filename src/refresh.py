@@ -136,7 +136,7 @@ async def _refresh_worker(getter: Getter):
                 push = True
                 push_passed_reason = []
 
-                if getter._first:
+                if getter.first:
                     if config.main_manager.value.first_get_donot_push:
                         push = False
                         push_passed_reason.append('first_get_donot_push')
@@ -196,7 +196,7 @@ async def _refresh_worker(getter: Getter):
         logger.debug(f'Refreshing finished')
 
         getter._number_of_consecutive_failures = 0
-        getter._first = False
+        getter.first = False
     except Exception as e:
         logger.error(f'Failed when refreshing: {e}', exc_info=True)
 
