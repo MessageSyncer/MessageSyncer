@@ -70,11 +70,8 @@ class GetterInfo():
 
 
 @dataclass
-class Article():
+class Article(GetResult):
     id: str
-    userId: str
-    ts: int
-    content: list
 
 
 @app.get("/", include_in_schema=False)
@@ -128,7 +125,7 @@ async def refresh_getter(getter: str, auth=Depends(authenticate)):
 @router.get("/articles/")
 async def list_articles(page: int = 0, page_size: int = 10, auth=Depends(authenticate)) -> list[Article]:
     return [
-        Article(ar.id, ar.userId, ar.ts, ar.content.asdict())
+        Article(id=ar.id, user_id=ar.userId, ts=ar.ts, content=ar.content.asdict())
         for ar in store.Article.select().order_by(store.Article.ts.desc()).paginate(page, page_size)
     ]
 
@@ -137,7 +134,7 @@ async def list_articles(page: int = 0, page_size: int = 10, auth=Depends(authent
 async def article(id: str, auth=Depends(authenticate)) -> Article:
     ar = store.Article.get_or_none(store.Article.id == id)
     if ar:
-        return Article(id, ar.userId, ar.ts, ar.content.asdict())
+        return Article(id=id, user_id=ar.userId, ts=ar.ts, content=ar.content.asdict())
     else:
         raise HTTPException(404)
 
