@@ -25,7 +25,7 @@ class Getter(Adapter[TADAPTERCONFIG, TADAPTERINSTANCECONFIG], Generic[TADAPTERCO
         super().__init__(id)
 
         self._working = False
-        self._first = True
+        self.first = True
         self._triggers: dict[str, aiocron.Cron] = {}
         self._number_of_consecutive_failures: int = 0
 
