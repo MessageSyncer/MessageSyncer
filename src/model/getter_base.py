@@ -10,7 +10,7 @@ class GetResult:
         self.content = content.asdict()
     user_id: str
     ts: int
-    content: dict
+    content: list[dict]
 
 
 @dataclass
