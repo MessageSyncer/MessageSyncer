@@ -3,11 +3,14 @@ from typing import List, Union
 import aiocron
 
 
-@dataclass
+@dataclass(init=False)
 class GetResult:
+    def __init__(self, user_id: str, ts: int, content: Struct) -> None:
+        self.struct: Struct = content
+        self.content = content.asdict()
     user_id: str
     ts: int
-    content: Struct
+    content: dict
 
 
 @dataclass

@@ -25,7 +25,7 @@ class Article(Model):
         database = main_db
 
     def from_getresult(id: str, getresult: GetResult):
-        return Article(id=id, userId=getresult.user_id, ts=getresult.ts, content=getresult.content)
+        return Article(id=id, userId=getresult.user_id, ts=getresult.ts, content=getresult.struct)
 
 
 Article.create_table()

@@ -131,7 +131,7 @@ async def _refresh_worker(getter: Getter):
 
         async def process_result(result: GetResult, logger: logging.Logger):
             try:
-                content = result.content
+                content = result.struct
                 content_text = str(content)
                 # logger.info(content_text)
 

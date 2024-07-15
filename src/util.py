@@ -13,6 +13,7 @@ from PIL import Image
 from pathlib import Path
 from peewee import SqliteDatabase
 from urllib.parse import urlparse
+from typing import Optional, Union
 
 
 def generate_function_call(function, *args, **kwargs):
