@@ -15,6 +15,7 @@ import pushers
 registered_pairs: dict[Getter, list[str]] = {}
 main_event_loop = None
 
+
 async def refresh(getter: Getter):
     result = {}
 
@@ -47,24 +48,25 @@ def get_adapter(getter=None, pusher=None):
             install_requirements(path)
 
 
-async def register_pair(pair_str):
-    pair_str: str
-    pair_str = pair_str.split(' ', 1)
+def register_pairs():
+    for pair_str in config.main.pair:
+        pair_str: str
+        pair_str = pair_str.split(' ', 1)
 
-    get_adapter(pair_str[0], pair_str[1])
+        get_adapter(pair_str[0], pair_str[1])
 
-    getter = getters.get_getter(pair_str[0])
-    push_detail = pair_str[1]
+        getter = getters.get_getter(pair_str[0])
+        push_detail = pair_str[1]
 
-    logging.debug(f'Distribute {push_detail} to {getter}')
+        logging.debug(f'Distribute {push_detail} to {getter}')
 
-    if getter in registered_pairs.keys():
-        registered_pairs[getter].append(push_detail)
-    else:
-        registered_pairs[getter] = [push_detail]
-        fresh_trigger(getter)
-        if config.main_manager.value.refresh_when_start:
-            asyncio.create_task(refresh(getter))
+        if getter in registered_pairs.keys():
+            registered_pairs[getter].append(push_detail)
+        else:
+            registered_pairs[getter] = [push_detail]
+            fresh_trigger(getter)
+            if config.main_manager.value.refresh_when_start:
+                asyncio.create_task(refresh(getter))
 
 
 def fresh_trigger(getter: Getter):

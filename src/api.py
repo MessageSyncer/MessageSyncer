@@ -92,7 +92,7 @@ async def hello_world() -> dict:
 @router.post("/pairs/")
 async def create_new_pair(pairs: list[str], auth=Depends(authenticate)):
     [
-        await refresh.register_pair(pair)
+        await refresh.register_pairs(pair)
         for pair in pairs
     ]
     _config = config.main_manager.value
