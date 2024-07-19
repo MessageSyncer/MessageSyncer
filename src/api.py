@@ -45,7 +45,7 @@ def authenticate(credentials: HTTPAuthorizationCredentials = Depends(HTTPBearer(
 
 
 def get_getter(getter_str: str) -> Getter:
-    ls = [_getter for _getter in refresh.registered_pairs if _getter.name == getter_str]
+    ls = [_getter for _getter in refresh.registered_getters if _getter.name == getter_str]
     if len(ls) != 0:
         return ls[0]
     raise HTTPException(404)
@@ -91,26 +91,24 @@ async def hello_world() -> dict:
 
 @router.post("/pairs/")
 async def create_new_pair(pairs: list[str], auth=Depends(authenticate)):
-    [
-        await refresh.register_pairs(pair)
-        for pair in pairs
-    ]
+    # We usually don't use it now because getters cannot be automatically overloaded when this api is designed
     _config = config.main_manager.value
     _config.pair.extend(pairs)
     config.main_manager.save(_config)
+    refresh.refresh_getters()
 
 
 @router.get("/getters/")
 async def list_all_getters(auth=Depends(authenticate)) -> list[GetterInfo]:
     return [
         asdict(GetterInfo(name=getter.name, class_name=getter.class_name, working=getter._working, config=getter.config, instance_config=getter.instance_config))
-        for getter in refresh.registered_pairs
+        for getter in refresh.registered_getters
     ]
 
 
 @router.post("/getters/refresh", response_model=type(None))
 async def refresh_getters(auth=Depends(authenticate)):
-    for getter in refresh.registered_pairs:
+    for getter in refresh.registered_getters:
         asyncio.create_task(refresh.refresh(getter))
 
 

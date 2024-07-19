@@ -13,17 +13,17 @@ import warning
 import getters
 import pushers
 
-registered_pairs: dict[Getter, list[str]] = {}
+registered_getters: list[Getter] = []
 main_event_loop = None
 
 
 async def refresh(getter: Getter):
+    fresh_trigger(getter)
     loop = asyncio.get_running_loop()
 
     def thread_worker():
         with network.force_proxies_patch():
-            future = asyncio.run_coroutine_threadsafe(_refresh_worker(getter), loop)
-            result_data = future.result()
+            result_data = asyncio.run(_refresh_worker(getter))
             return result_data
 
     with ThreadPoolExecutor() as executor:
@@ -51,7 +51,8 @@ def get_adapter(getter=None, pusher=None):
             install_requirements(path)
 
 
-def register_pairs():
+def parse_pairs():
+    result: dict[Getter, list[str]] = {}
     for pair_str in config.main.pair:
         pair_str: str
         pair_str = pair_str.split(' ', 1)
@@ -60,16 +61,23 @@ def register_pairs():
 
         getter = getters.get_getter(pair_str[0])
         push_detail = pair_str[1]
+        result.setdefault(getter, []).append(push_detail)
+    return result
 
-        logging.debug(f'Distribute {push_detail} to {getter}')
 
-        if getter in registered_pairs.keys():
-            registered_pairs[getter].append(push_detail)
-        else:
-            registered_pairs[getter] = [push_detail]
+def refresh_getters():
+    pairs_details = parse_pairs()
+    for getter in registered_getters:
+        if not getter in pairs_details:
+            for corn in getter._triggers.values():
+                unregister_corn(corn)
+    for getter in pairs_details:
+        if not getter in registered_getters:
             fresh_trigger(getter)
             if config.main_manager.value.refresh_when_start:
                 asyncio.create_task(refresh(getter))
+            registered_getters.append(getter)
+            logging.info(f'{getter} registered')
 
 
 def fresh_trigger(getter: Getter):
@@ -111,14 +119,11 @@ def stop_corn(getter: Getter, trigger: str):
 
 
 async def _refresh_worker(getter: Getter):
-    global registered_pairs
-
     logger = getter.logger
     getter_type = getter.__class__.__name__
     getter_prefix = getter_type + '_'
 
     logger.debug('Refreshing')
-    fresh_trigger(getter)
     if not getter.available:
         logger.debug(f'Unavailable. Passed')
         return {}
@@ -150,7 +155,7 @@ async def _refresh_worker(getter: Getter):
                         push_passed_reason.append(f'triggers block "{rule}"')
 
                 if push:
-                    for push in registered_pairs[getter]:
+                    for push in parse_pairs()[getter]:
                         try:
                             await pushers.push_to(push, content)
                         except Exception as e:

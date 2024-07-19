@@ -11,7 +11,7 @@ import api
 
 async def main():
     refresh.main_event_loop = asyncio.get_event_loop()
-    refresh.register_pairs()
+    refresh.refresh_getters()
 
     api.serve()
     while True:

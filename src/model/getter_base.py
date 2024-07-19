@@ -12,7 +12,7 @@ class GetResult:
 
 @dataclass
 class GetterConfig(AdapterConfig):
-    trigger: list[str] = field(default_factory=list)
+    trigger: list[str] = field(default_factory=list)  # Partially supports hotreload. Takes effect after every time refreshes.
 
 
 @dataclass
