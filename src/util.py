@@ -8,6 +8,7 @@ import colorlog
 import importlib
 import subprocess
 import sys
+import re
 import asyncio
 from PIL import Image
 from pathlib import Path
@@ -130,6 +131,22 @@ async def async_download(url, path):
         return path
     else:
         raise Exception(f'Download failed: {response.status_code}')
+
+
+def is_valid_url(url):
+    if url == None:
+        return False
+    pattern = re.compile(
+        r'^(https?|ftp)://'  # http, https
+        r'(?:(?:[A-Z0-9](?:[A-Z0-9-]{0,61}[A-Z0-9])?\.)+(?:[A-Z]{2,6}\.?|[A-Z0-9-]{2,}\.?)|'  # 域名
+        r'localhost|'  # local host
+        r'\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}|'  # IPv4 address
+        r'\[?[A-F0-9]*:[A-F0-9:]+\]?)'  # IPv6 address
+        r'(?::\d+)?'  # Port number (optional)
+        r'(?:/?|[/?]\S+)$', re.IGNORECASE)  # Slashes and other characters
+
+    # Use regular expressions to match the given URL
+    return re.match(pattern, url) is not None
 
 
 def read_file(path):

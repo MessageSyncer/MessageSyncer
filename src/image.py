@@ -13,10 +13,13 @@ async def download_list(ls: list[str], after_download_hook: Callable[[str, str, 
     works = []
 
     async def process_picture(picurl):
-        path, downloaded = await download_withcache(picurl)
-        if after_download_hook:
-            path = await asyncio.threads.to_thread(after_download_hook, *(picurl, path, downloaded))
-        pics[picurl] = path
+        try:
+            path, downloaded = await download_withcache(picurl)
+            if after_download_hook:
+                path = await asyncio.threads.to_thread(after_download_hook, *(picurl, path, downloaded))
+            pics[picurl] = path
+        except:
+            pics.pop(picurl)
     for pic in ls:
         works.append(process_picture(pic))
 
@@ -46,6 +49,8 @@ def webp2png(path: Path):
 
 async def download_withcache(url) -> tuple[str, bool]:
     global path
+    if not is_valid_url(url):
+        raise Exception('Pic url not valid')
     prased_url = urlparse(url)
     filename: str = prased_url.path.split('/')[-1]
 
