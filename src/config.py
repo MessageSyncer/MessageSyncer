@@ -125,8 +125,8 @@ class MainConfig:
     # The recommendation is True.
     # When it is False and it has been a long time since the last MessageSynser refresh, it is recommended to manually perform a refresh after MessageSynser is started.
     refresh_when_start: bool = True
-
     first_get_donot_push: bool = True
+    
     block: list[str] = field(default_factory=list[str])
     perf_merged_details: bool = True
     proxies: dict[str, str] = field(default_factory=dict[str, str])  # This field will be passed directly to requests.request
