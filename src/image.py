@@ -57,6 +57,6 @@ async def download_withcache(url) -> tuple[str, bool]:
     _path = path / filename
     if not _path.exists():
         await async_download(url, _path)
-        return _path, True
+        return _path.absolute(), True
     else:
-        return _path, False
+        return _path.absolute(), False
