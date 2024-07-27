@@ -63,6 +63,11 @@ class Struct:
         elif type(source) == list:
             self.content.extend([type_(_source) for _source in source])
         return self
+    
+    def extend(self, another: 'Struct') -> 'Struct':
+        for content in another.content:
+            self.content.append(content)
+        return self
 
     def asdict(self):
         result = []
@@ -90,8 +95,6 @@ class Struct:
         ip='',
         detail=''
     ) -> 'Struct':
-        if title != '':
-            title = title + '\n\n'
         if ip != '':
             ip = f' · {ip}'
         if detail != '':
@@ -102,7 +105,15 @@ class Struct:
             url = '\n' + url
 
         result = Struct()
-        result.text(f"{title}{content}")
+        if type(content) == Struct:
+            if title != '':
+                title = title + '\n'
+            result.text(f"{title}")
+            result.extend(content)
+        else:
+            if title != '':
+                title = title + '\n\n'
+            result.text(f"{title}{content}")
         result.image(images)
         result.text(f"\n\n{username}{datetime.fromtimestamp(ts).strftime('%H:%M')}{ip}{detail}{url}")
 
