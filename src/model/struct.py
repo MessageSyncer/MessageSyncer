@@ -63,6 +63,11 @@ class Struct:
         elif type(source) == list:
             self.content.extend([type_(_source) for _source in source])
         return self
+    
+    def extend(self, another: 'Struct') -> 'Struct':
+        for content in another.content:
+            self.content.append(content)
+        return self
 
     def asdict(self):
         result = []
