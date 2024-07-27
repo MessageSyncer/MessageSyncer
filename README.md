@@ -4,7 +4,7 @@
 
 # MessageSyncer
 An fully asynchronous push framework.
-
+Open source under [GPL3.0](https://www.gnu.org/licenses/gpl-3.0.txt).
 </div>
 
 ## Feature

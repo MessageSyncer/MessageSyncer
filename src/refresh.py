@@ -1,5 +1,6 @@
 from model import *
 from util import *
+from concurrent.futures import ThreadPoolExecutor
 import store
 import time
 import re
@@ -12,26 +13,22 @@ import warning
 import getters
 import pushers
 
-setting: dict[Getter, list[str]] = {}
+registered_getters: list[Getter] = []
+main_event_loop = None
 
 
-def get_refresh_thread(getter: Getter, var: dict = {}):
-    def thread():
+async def refresh(getter: Getter):
+    fresh_trigger(getter)
+    loop = asyncio.get_running_loop()
+
+    def thread_worker():
         with network.force_proxies_patch():
-            var.clear()
-            var.update(asyncio.run(_refresh_worker(getter)))
-    return threading.Thread(target=thread)
+            result_data = asyncio.run(_refresh_worker(getter))
+            return result_data
 
+    with ThreadPoolExecutor() as executor:
+        result = await loop.run_in_executor(executor, thread_worker)
 
-def refresh(getter: Getter):
-    get_refresh_thread(getter).start()
-
-
-async def block_refresh(getter: Getter):
-    result = {}
-    thread = get_refresh_thread(getter, result)
-    thread.start()
-    thread.join()
     return result
 
 
@@ -54,62 +51,74 @@ def get_adapter(getter=None, pusher=None):
             install_requirements(path)
 
 
-async def register_pair(pair_str):
-    pair_str: str
-    pair_str = pair_str.split(' ', 1)
+def parse_pairs():
+    result: dict[Getter, list[str]] = {}
+    for pair_str in config.main.pair:
+        pair_str: str
+        pair_str = pair_str.split(' ', 1)
 
-    get_adapter(pair_str[0], pair_str[1])
+        get_adapter(pair_str[0], pair_str[1])
 
-    getter = getters.get_getter(pair_str[0])
-    push_detail = pair_str[1]
-
-    logging.debug(f'Distribute {push_detail} to {getter}')
-
-    if getter in setting.keys():
-        setting[getter].append(push_detail)
-    else:
-        setting[getter] = [push_detail]
-        await register_all_trigger(getter)
+        getter = getters.get_getter(pair_str[0])
+        push_detail = pair_str[1]
+        result.setdefault(getter, []).append(push_detail)
+    return result
 
 
-async def register_all_trigger(getter: Getter):
+def refresh_getters():
+    pairs_details = parse_pairs()
+    for getter in registered_getters:
+        if not getter in pairs_details:
+            for corn in getter._triggers.values():
+                unregister_corn(corn)
+    for getter in pairs_details:
+        if not getter in registered_getters:
+            fresh_trigger(getter)
+            if config.main_manager.value.refresh_when_start:
+                asyncio.create_task(refresh(getter))
+            registered_getters.append(getter)
+            logging.info(f'{getter} registered')
+
+
+def fresh_trigger(getter: Getter):
     triggers = getter.config.get('trigger', [])
     override_triggers = getter.instance_config.get('override_trigger', None)
     if override_triggers != None:
         triggers = override_triggers
 
+    for trigger in list(getter._triggers.keys()):
+        if not trigger in triggers:
+            unregister_corn(getter, trigger)
+
     for trigger in triggers:
-        register_corn(getter, trigger)
-    if config.main_manager.value.refresh_when_start:
-        refresh(getter)
+        if not trigger in list(getter._triggers.keys()):
+            register_corn(getter, trigger)
 
 
 def register_corn(getter: Getter, trigger: str):
-    cron = aiocron.crontab(trigger, refresh, (getter,), start=True)
-    getter._trigger[trigger] = cron
-    logging.debug(f'{getter} registered: {trigger}')
+    cron = aiocron.crontab(trigger, refresh, (getter,), start=True, loop=main_event_loop)
+    getter._triggers[trigger] = cron
+    getter.logger.debug(f'Registered: {trigger}')
     return cron
-
-
-def start_corn(getter: Getter, trigger: str):
-    getter._trigger[trigger].start()
-    logging.debug(f'{getter} trigger started: {trigger}')
-
-
-def stop_corn(getter: Getter, trigger: str):
-    getter._trigger[trigger].stop()
-    logging.debug(f'{getter} trigger stopped: {trigger}')
 
 
 def unregister_corn(getter: Getter, trigger: str):
     stop_corn(getter, trigger)
-    getter._trigger.pop(trigger)
-    logging.debug(f'{getter} unregistered: {trigger}')
+    getter._triggers.pop(trigger)
+    getter.logger.debug(f'Unregistered: {trigger}')
+
+
+def start_corn(getter: Getter, trigger: str):
+    getter._triggers[trigger].start()
+    getter.logger.debug(f'Trigger started: {trigger}')
+
+
+def stop_corn(getter: Getter, trigger: str):
+    getter._triggers[trigger].stop()
+    getter.logger.debug(f'Trigger stopped: {trigger}')
 
 
 async def _refresh_worker(getter: Getter):
-    global setting
-
     logger = getter.logger
     getter_type = getter.__class__.__name__
     getter_prefix = getter_type + '_'
@@ -146,7 +155,7 @@ async def _refresh_worker(getter: Getter):
                         push_passed_reason.append(f'triggers block "{rule}"')
 
                 if push:
-                    for push in setting[getter]:
+                    for push in parse_pairs()[getter]:
                         try:
                             await pushers.push_to(push, content)
                         except Exception as e:

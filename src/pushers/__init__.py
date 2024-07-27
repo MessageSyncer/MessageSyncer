@@ -13,7 +13,11 @@ def parse_pusher(pusher):
     _pusher = pusher.split('.', 2)
     pusher = _pusher[0]
     pusher_id = _pusher[1]
+    if pusher_id == '':
+        pusher_id = None
     pusher_to = _pusher[2]
+    if pusher_to == '':
+        pusher_to = None
     return pusher, pusher_id, pusher_to
 
 

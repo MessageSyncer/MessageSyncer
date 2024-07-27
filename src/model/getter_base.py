@@ -12,7 +12,7 @@ class GetResult:
 
 @dataclass
 class GetterConfig(AdapterConfig):
-    trigger: list[str] = field(default_factory=list)
+    trigger: list[str] = field(default_factory=list)  # Partially supports hotreload. Takes effect after every time refreshes.
 
 
 @dataclass
@@ -26,7 +26,7 @@ class Getter(Adapter[TADAPTERCONFIG, TADAPTERINSTANCECONFIG], Generic[TADAPTERCO
 
         self._working = False
         self._first = True
-        self._trigger: dict[str, aiocron.Cron] = {}
+        self._triggers: dict[str, aiocron.Cron] = {}
         self._number_of_consecutive_failures: int = 0
 
     @property
