@@ -14,5 +14,5 @@ class PusherInstanceConfig(AdapterInstanceConfig):
 
 class Pusher(Adapter[TADAPTERCONFIG, TADAPTERINSTANCECONFIG], Generic[TADAPTERCONFIG, TADAPTERINSTANCECONFIG]):
     @abstractmethod
-    async def push(self, content: Struct, to: str) -> None:
+    async def push(self, content: Struct, to: str = None) -> None:
         pass
