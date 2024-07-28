@@ -1,6 +1,6 @@
 import config
 from model import *
-from pushers import get_pusher, push_to
+from pushers import push_to
 
 
 async def warning(content: Struct):

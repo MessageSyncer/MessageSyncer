@@ -123,6 +123,11 @@ async def refresh_getter(getter: str, auth=Depends(authenticate)):
     asyncio.create_task(refresh.refresh(get_getter(getter)))
 
 
+@router.post("/getters/{getter_class:str}/reload", response_model=type(None))
+async def reload_getter(getter_class: str, auth=Depends(authenticate)):
+    refresh.reload_adapter(getter_class, Getter)
+
+
 @router.get("/articles/")
 async def list_articles(page: int = 0, page_size: int = 10, auth=Depends(authenticate)) -> list[Article]:
     return [

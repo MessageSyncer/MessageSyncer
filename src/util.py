@@ -23,7 +23,7 @@ def generate_function_call(function, *args, **kwargs):
     return f"{function}({all_args_str})"
 
 
-def install_requirements(path: Path):
+def try_install_requirements(path: Path):
     # Check if requirements.txt exists
     requirements_file = path / 'requirements.txt'
     if not requirements_file.exists():
@@ -72,26 +72,34 @@ def clone_from_vcs(string: str, path: Path):
         raise Exception(f"Error cloning repository: {e}")
 
 
-def import_all_to_dict(path: Path) -> dict:
+attr_module = {}
+
+
+def find_spec_attr(path: Path, name: str) -> object:
+    global attr_module
+
+    def process(module, attr):
+        attr_module[attr] = module
+        return getattr(module, attr)
+
     if not path.exists():
         raise ValueError(f"The path {path} does not exist.")
-
-    namespace: dict = {}
 
     # Convert the path to an absolute path and add it to sys.path
     path = path.resolve()
     sys.path.append(str(path))
 
-    for item in path.rglob('*'):
+    for item in path.glob('*'):
         if item.is_dir() and (item / '__init__.py').exists():
             # Import everything in the package
             try:
+                try_install_requirements(item)
                 module_name = item.relative_to(path.parent).as_posix().replace('/', '.')
                 module = importlib.import_module(module_name)
                 # Import everything from the package
                 for attr in dir(module):
-                    if not attr.startswith('_'):
-                        namespace[attr] = getattr(module, attr)
+                    if attr == name:
+                        return process(module, attr)
             except Exception as e:
                 pass
         elif item.is_file() and item.suffix == '.py' and item.name != '__init__.py':
@@ -101,12 +109,11 @@ def import_all_to_dict(path: Path) -> dict:
                 module = importlib.import_module(module_name)
                 # Import everything from modules
                 for attr in dir(module):
-                    if not attr.startswith('_'):
-                        namespace[attr] = getattr(module, attr)
+                    if attr == name:
+                        return process(module, attr)
             except Exception as e:
                 pass
-
-    return namespace
+    raise KeyError(name)
 
 
 def download(url, path):

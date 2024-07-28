@@ -12,13 +12,14 @@ import network
 import warning
 import getters
 import pushers
+import util
 
 registered_getters: list[Getter] = []
 main_event_loop = None
 
 
 async def refresh(getter: Getter):
-    fresh_trigger(getter)
+    refresh_trigger(getter)
     loop = asyncio.get_running_loop()
 
     def thread_worker():
@@ -32,23 +33,46 @@ async def refresh(getter: Getter):
     return result
 
 
-def get_adapter(getter=None, pusher=None):
-    if getter:
-        try:
-            getters.get_getter(getter)
-        except getters.GetterNotFoundException as e:
-            getter_class, _ = getters.parse_getter(getter)
-            path = getters.path/getter_class
-            clone_from_vcs(config.main.url.get(getter_class, f'https://github.com/MessageSyncer/{getter_class}'), path)
-            install_requirements(path)
-    if pusher:
-        try:
-            pushers.get_pusher(pusher)
-        except pushers.PusherNotFoundException as e:
-            pusher_class, _, _ = pushers.parse_pusher(pusher)
-            path = pushers.path/pusher_class
-            clone_from_vcs(config.main.url.get(pusher_class, f'https://github.com/MessageSyncer/{pusher_class}'), path)
-            install_requirements(path)
+def reload_adapter(name: str, type_: type):
+    importlib.reload(util.attr_module[name])
+    if type_ == Getter:
+        path = getters.path
+    elif type_ == Pusher:
+        path = pushers.path
+
+    new_adapter_class = find_spec_attr(path, name)
+
+    if type_ == Getter:
+        for getter in registered_getters.copy():
+            if getter.class_name == name:
+                for trigger in list(getter._triggers.keys()):
+                    unregister_corn(getter, trigger)
+                registered_getters.remove(getter)
+        refresh_getters()
+
+    return new_adapter_class
+
+
+def install_adapter(name: str, type_: type):
+    if type_ == Getter:
+        path = getters.path/name
+    elif type_ == Pusher:
+        path = pushers.path/name
+    clone_from_vcs(config.main.url.get(name, f'https://github.com/MessageSyncer/{name}'), path)
+    try_install_requirements(path)
+    return find_spec_attr(path, name)
+
+
+def get_adapter_class(adapter_class_name, type_: type):
+    if type_ == Getter:
+        path = getters.path
+    elif type_ == Pusher:
+        path = pushers.path
+
+    try:
+        return find_spec_attr(path, adapter_class_name)
+    except KeyError:
+        return install_adapter(adapter_class_name, type_)
 
 
 def parse_pairs():
@@ -56,12 +80,20 @@ def parse_pairs():
     for pair_str in config.main.pair:
         pair_str: str
         pair_str = pair_str.split(' ', 1)
+        getter_str = pair_str[0]
+        pusher_str = pair_str[1]
+        getter_class_name, getter_id = getters.parse_getter(getter_str)
+        pusher_class_name, _, _ = pushers.parse_pusher(pusher_str)
+        getter_class = get_adapter_class(getter_class_name, Getter)
+        pusher_class = get_adapter_class(pusher_class_name, Pusher)
 
-        get_adapter(pair_str[0], pair_str[1])
+        if (matched := [_getter for _getter in registered_getters if _getter.name == getter_str]):
+            getter = matched[0]
+        else:
+            getter = getter_class(getter_id)
+            logging.debug(f'{getter} initialized')
 
-        getter = getters.get_getter(pair_str[0])
-        push_detail = pair_str[1]
-        result.setdefault(getter, []).append(push_detail)
+        result.setdefault(getter, []).append(pusher_str)
     return result
 
 
@@ -69,18 +101,18 @@ def refresh_getters():
     pairs_details = parse_pairs()
     for getter in registered_getters:
         if not getter in pairs_details:
-            for corn in getter._triggers.values():
-                unregister_corn(corn)
+            for trigger in list(getter._triggers.keys()):
+                unregister_corn(getter, trigger)
     for getter in pairs_details:
         if not getter in registered_getters:
-            fresh_trigger(getter)
+            refresh_trigger(getter)
             if config.main_manager.value.refresh_when_start:
                 asyncio.create_task(refresh(getter))
             registered_getters.append(getter)
             logging.info(f'{getter} registered')
 
 
-def fresh_trigger(getter: Getter):
+def refresh_trigger(getter: Getter):
     triggers = getter.config.get('trigger', [])
     override_triggers = getter.instance_config.get('override_trigger', None)
     if override_triggers != None:
@@ -155,12 +187,12 @@ async def _refresh_worker(getter: Getter):
                         push_passed_reason.append(f'triggers block "{rule}"')
 
                 if push:
-                    for push in parse_pairs()[getter]:
+                    for push_detail in parse_pairs()[getter]:
                         try:
-                            await pushers.push_to(push, content)
+                            await pushers.push_to(push_detail, content)
                         except Exception as e:
                             logger.error(e)
-                            await warning.warning(Struct().text(f'Failed to push to {push}: \n{content}'))
+                            await warning.warning(Struct().text(f'Failed to push to {push_detail}: \n{content}'))
                 else:
                     logger.debug('Skipped to push because: {}'.format(', '.join(push_passed_reason)))
             except Exception as e:
