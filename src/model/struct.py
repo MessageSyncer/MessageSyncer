@@ -52,12 +52,12 @@ class Struct:
                 self.content.append(type_(**data_))
 
     def image(self, source: str | list[str] = None) -> 'Struct':
-        return self._add(source, StructImage)
+        return self._create(source, StructImage)
 
     def text(self, text: str | list[str] = None) -> 'Struct':
-        return self._add(text, StructText)
+        return self._create(text, StructText)
 
-    def _add(self, source, type_):
+    def _create(self, source, type_):
         if type(source) == str:
             self.content.append(type_(source))
         elif type(source) == list:
