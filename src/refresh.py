@@ -20,7 +20,6 @@ main_event_loop = None
 
 async def refresh(getter: Getter):
     refresh_trigger(getter)
-    loop = asyncio.get_running_loop()
 
     def thread_worker():
         with network.force_proxies_patch():
@@ -28,7 +27,7 @@ async def refresh(getter: Getter):
             return result_data
 
     with ThreadPoolExecutor() as executor:
-        result = await loop.run_in_executor(executor, thread_worker)
+        result = asyncio.get_running_loop().run_in_executor(executor, thread_worker)
 
     return result
 
