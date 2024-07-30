@@ -34,11 +34,6 @@ async def refresh(getter: Getter):
 
 def reload_adapter(name: str, type_: type):
     lib = importlib.reload(util.attr_module[name])
-    if type_ == Getter:
-        path = getters.path
-    elif type_ == Pusher:
-        path = pushers.path
-
     new_adapter_class = getattr(lib, name)
 
     if type_ == Getter:
@@ -87,6 +82,8 @@ def parse_pairs():
         pusher_class = get_adapter_class(pusher_class_name, Pusher)
 
         if (matched := [_getter for _getter in registered_getters if _getter.name == getter_str]):
+            getter = matched[0]
+        elif (matched := [_getter for _getter in result if _getter.name == getter_str]):
             getter = matched[0]
         else:
             getter = getter_class(getter_id)
