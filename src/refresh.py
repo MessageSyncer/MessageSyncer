@@ -33,13 +33,13 @@ async def refresh(getter: Getter):
 
 
 def reload_adapter(name: str, type_: type):
-    importlib.reload(util.attr_module[name])
+    lib = importlib.reload(util.attr_module[name])
     if type_ == Getter:
         path = getters.path
     elif type_ == Pusher:
         path = pushers.path
 
-    new_adapter_class = find_spec_attr(path, name)
+    new_adapter_class = getattr(lib, name)
 
     if type_ == Getter:
         for getter in registered_getters.copy():
