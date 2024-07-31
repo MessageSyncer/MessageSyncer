@@ -1,12 +1,8 @@
 from model import *
 from util import *
+import importing
 
-pushers_inited: list[Pusher] = []
 path = Path() / 'pushers'
-
-
-class PusherNotFoundException(Exception):
-    pass
 
 
 def parse_pusher(pusher):
@@ -23,17 +19,7 @@ def parse_pusher(pusher):
 
 def _get_pusher(pusher) -> tuple[Pusher, dict]:
     pusher_class, pusher_id, pusher_to = parse_pusher(pusher)
-    if matched := [_pusher for _pusher in pushers_inited if _pusher.name == f'{pusher_class}.{pusher_id}']:
-        pusher = matched[0]
-    else:
-        try:
-            pusher = find_spec_attr(path, pusher_class)(pusher_id)
-        except KeyError:
-            raise PusherNotFoundException()
-        pushers_inited.append(pusher)
-
-        logging.debug(f'{pusher} initialized')
-
+    pusher = importing.details[pusher_class].obj(pusher_id)
     return pusher, {'to': pusher_to}
 
 

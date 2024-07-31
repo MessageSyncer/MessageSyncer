@@ -89,9 +89,8 @@ async def hello_world() -> dict:
     })
 
 
-@router.post("/pairs/")
+@router.post("/pairs/", description='We usually donot use it now because getters cannot be automatically overloaded when this api is designed.')
 async def create_new_pair(pairs: list[str], auth=Depends(authenticate)):
-    # We usually don't use it now because getters cannot be automatically overloaded when this api is designed
     _config = config.main_manager.value
     _config.pair.extend(pairs)
     config.main_manager.save(_config)
@@ -123,9 +122,14 @@ async def refresh_getter(getter: str, auth=Depends(authenticate)):
     asyncio.create_task(refresh.refresh(get_getter(getter)))
 
 
-@router.post("/getters/{getter_class:str}/reload", response_model=type(None))
+@router.post("/getter_classes/{getter_class:str}/reload", response_model=type(None))
 async def reload_getter(getter_class: str, auth=Depends(authenticate)):
     refresh.reload_adapter(getter_class, Getter)
+
+
+@router.post("/pusher_classes/{pusher_class:str}/reload", response_model=type(None))
+async def reload_pusher(pusher_class: str, auth=Depends(authenticate)):
+    refresh.reload_adapter(pusher_class, Pusher)
 
 
 @router.get("/articles/")

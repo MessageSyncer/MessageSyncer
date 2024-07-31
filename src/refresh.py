@@ -12,39 +12,77 @@ import network
 import warning
 import getters
 import pushers
+import importing
 import util
 
 registered_getters: list[Getter] = []
 main_event_loop = None
 
 
-async def refresh(getter: Getter):
+def register_getter(getter: Getter):
     refresh_trigger(getter)
+    if config.main_manager.value.refresh_when_start:
+        asyncio.create_task(refresh(getter))
+    registered_getters.append(getter)
+    logging.debug(f'Getter registered: {getter}')
 
-    def thread_worker():
-        with network.force_proxies_patch():
-            result_data = asyncio.run(_refresh_worker(getter))
-            return result_data
 
-    with ThreadPoolExecutor() as executor:
-        result = asyncio.get_running_loop().run_in_executor(executor, thread_worker)
+def unregister_getter(getter: Getter):
+    for trigger in list(getter._triggers.keys()):
+        unregister_corn(getter, trigger)
+    registered_getters.remove(getter)
+    logging.debug(f'Getter unregistered: {getter}')
 
-    return result
+
+def refresh_trigger(getter: Getter):
+    triggers = getter.config.get('trigger', [])
+    override_triggers = getter.instance_config.get('override_trigger', None)
+    if override_triggers != None:
+        triggers = override_triggers
+
+    for trigger in list(getter._triggers.keys()):
+        if not trigger in triggers:
+            unregister_corn(getter, trigger)
+
+    for trigger in triggers:
+        if not trigger in list(getter._triggers.keys()):
+            register_corn(getter, trigger)
+
+
+def register_corn(getter: Getter, trigger: str):
+    cron = aiocron.crontab(trigger, refresh, (getter,), start=True, loop=main_event_loop)
+    getter._triggers[trigger] = cron
+    getter.logger.debug(f'Trigger registered: {trigger}')
+    return cron
+
+
+def unregister_corn(getter: Getter, trigger: str):
+    stop_corn(getter, trigger)
+    getter._triggers.pop(trigger)
+    getter.logger.debug(f'Trigger unregistered: {trigger}')
+
+
+def start_corn(getter: Getter, trigger: str):
+    getter._triggers[trigger].start()
+    getter.logger.debug(f'Trigger started: {trigger}')
+
+
+def stop_corn(getter: Getter, trigger: str):
+    getter._triggers[trigger].stop()
+    getter.logger.debug(f'Trigger stopped: {trigger}')
 
 
 def reload_adapter(name: str, type_: type):
-    lib = importlib.reload(util.attr_module[name])
-    new_adapter_class = getattr(lib, name)
+    importing.details[name].reload()
+    new_adapter_class = importing.details[name].obj
 
     if type_ == Getter:
         for getter in registered_getters.copy():
             if getter.class_name == name:
-                for trigger in list(getter._triggers.keys()):
-                    unregister_corn(getter, trigger)
-                registered_getters.remove(getter)
+                unregister_getter(getter)
         refresh_getters()
 
-    return new_adapter_class
+    return new_adapter_class  # FIXME: donot return
 
 
 def install_adapter(name: str, type_: type):
@@ -52,9 +90,11 @@ def install_adapter(name: str, type_: type):
         path = getters.path/name
     elif type_ == Pusher:
         path = pushers.path/name
-    clone_from_vcs(config.main.url.get(name, f'https://github.com/MessageSyncer/{name}'), path)
-    try_install_requirements(path)
-    return find_spec_attr(path, name)
+    clone_from_vcs(
+        config.main.url.get(name, f'https://github.com/MessageSyncer/{name}'),
+        path)
+    importing.import_all([pushers.path, getters.path])
+    return importing.details[name]
 
 
 def get_adapter_class(adapter_class_name, type_: type):
@@ -64,7 +104,7 @@ def get_adapter_class(adapter_class_name, type_: type):
         path = pushers.path
 
     try:
-        return find_spec_attr(path, adapter_class_name)
+        return importing.details[adapter_class_name].obj
     except KeyError:
         return install_adapter(adapter_class_name, type_)
 
@@ -97,53 +137,24 @@ def refresh_getters():
     pairs_details = parse_pairs()
     for getter in registered_getters:
         if not getter in pairs_details:
-            for trigger in list(getter._triggers.keys()):
-                unregister_corn(getter, trigger)
+            unregister_getter(getter)
     for getter in pairs_details:
         if not getter in registered_getters:
-            refresh_trigger(getter)
-            if config.main_manager.value.refresh_when_start:
-                asyncio.create_task(refresh(getter))
-            registered_getters.append(getter)
-            logging.info(f'{getter} registered')
+            register_getter(getter)
 
 
-def refresh_trigger(getter: Getter):
-    triggers = getter.config.get('trigger', [])
-    override_triggers = getter.instance_config.get('override_trigger', None)
-    if override_triggers != None:
-        triggers = override_triggers
+async def refresh(getter: Getter):
+    refresh_trigger(getter)
 
-    for trigger in list(getter._triggers.keys()):
-        if not trigger in triggers:
-            unregister_corn(getter, trigger)
+    def thread_worker():
+        with network.force_proxies_patch():
+            result_data = asyncio.run(_refresh_worker(getter))
+            return result_data
 
-    for trigger in triggers:
-        if not trigger in list(getter._triggers.keys()):
-            register_corn(getter, trigger)
+    with ThreadPoolExecutor() as executor:
+        result = asyncio.get_running_loop().run_in_executor(executor, thread_worker)
 
-
-def register_corn(getter: Getter, trigger: str):
-    cron = aiocron.crontab(trigger, refresh, (getter,), start=True, loop=main_event_loop)
-    getter._triggers[trigger] = cron
-    getter.logger.debug(f'Registered: {trigger}')
-    return cron
-
-
-def unregister_corn(getter: Getter, trigger: str):
-    stop_corn(getter, trigger)
-    getter._triggers.pop(trigger)
-    getter.logger.debug(f'Unregistered: {trigger}')
-
-
-def start_corn(getter: Getter, trigger: str):
-    getter._triggers[trigger].start()
-    getter.logger.debug(f'Trigger started: {trigger}')
-
-
-def stop_corn(getter: Getter, trigger: str):
-    getter._triggers[trigger].stop()
-    getter.logger.debug(f'Trigger stopped: {trigger}')
+    return result
 
 
 async def _refresh_worker(getter: Getter):
