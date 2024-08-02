@@ -74,7 +74,7 @@ class Article():
     id: str
     userId: str
     ts: int
-    content: list
+    content: list[dict]
 
 
 @app.get("/", include_in_schema=False)
@@ -95,6 +95,11 @@ async def create_new_pair(pairs: list[str], auth=Depends(authenticate)):
     _config.pair.extend(pairs)
     config.main_manager.save(_config)
     refresh.refresh_getters()
+
+
+@router.post("/adapter_classes/{adapter_class:str}/reload", response_model=type(None))
+async def reload_getter(adapter_class: str, auth=Depends(authenticate)):
+    refresh.reload_adapter(adapter_class)
 
 
 @router.get("/getters/")
@@ -120,16 +125,6 @@ async def getter(getter: str, auth=Depends(authenticate)) -> GetterInfo:
 @router.post("/getters/{getter:str}/refresh", response_model=type(None))
 async def refresh_getter(getter: str, auth=Depends(authenticate)):
     asyncio.create_task(refresh.refresh(get_getter(getter)))
-
-
-@router.post("/getter_classes/{getter_class:str}/reload", response_model=type(None))
-async def reload_getter(getter_class: str, auth=Depends(authenticate)):
-    refresh.reload_adapter(getter_class, Getter)
-
-
-@router.post("/pusher_classes/{pusher_class:str}/reload", response_model=type(None))
-async def reload_pusher(pusher_class: str, auth=Depends(authenticate)):
-    refresh.reload_adapter(pusher_class, Pusher)
 
 
 @router.get("/articles/")

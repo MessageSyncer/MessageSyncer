@@ -19,6 +19,10 @@ registered_getters: list[Getter] = []
 main_event_loop = None
 
 
+class AdapterDoNotExistException(Exception):
+    pass
+
+
 def register_getter(getter: Getter):
     refresh_trigger(getter)
     if config.main_manager.value.refresh_when_start:
@@ -72,7 +76,11 @@ def stop_corn(getter: Getter, trigger: str):
     getter.logger.debug(f'Trigger stopped: {trigger}')
 
 
-def reload_adapter(name: str, type_: type):
+def reload_adapter(name: str):
+    try:
+        type_ = importing.details[name].obj.__orig_bases__[0].__origin__
+    except:
+        raise AdapterDoNotExistException()
     importing.details[name].reload()
     new_adapter_class = importing.details[name].obj
 
