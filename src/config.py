@@ -120,9 +120,10 @@ class MainConfig:
     logging: LoggingConfig = field(default_factory=LoggingConfig)
     api: APIConfig = field(default_factory=APIConfig)
 
-    # Pre-refresh is performed when Getter is registered. The results of each Getter's first refresh will not be pushed.
-    # The recommendation is True.
-    # When it is False and it has been a long time since the last MessageSynser refresh, it is recommended to manually perform a refresh after MessageSynser is started.
+    # Pre-refresh will be executed when Getter is registered if refresh_when_start.
+    # The results of each Getter's first refresh will not be pushed if first_get_donot_push.
+    # The recommendation is True and True.
+    # When refresh_when_start is False and it has been a long time since the last MessageSynser refresh, it is recommended to manually perform a refresh after MessageSynser is started.
     refresh_when_start: bool = True
     first_get_donot_push: bool = True
     
