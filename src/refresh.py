@@ -82,8 +82,6 @@ def reload_adapter(name: str, type_: type):
                 unregister_getter(getter)
         refresh_getters()
 
-    return new_adapter_class  # FIXME: donot return
-
 
 def install_adapter(name: str, type_: type):
     if type_ == Getter:

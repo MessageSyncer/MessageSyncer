@@ -42,7 +42,6 @@ class HotReloadConfigManager(Generic[T]):
 
     def from_dict(data_type: T, data: dict) -> T:
         # TODO: remove dict access support
-        # FIXME: check
         """Instantiate data classes from dictionaries, including working with nested data classes."""
 
         if data_type in [dict, int, str, list, float, None]:
