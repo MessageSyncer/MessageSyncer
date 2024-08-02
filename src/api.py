@@ -99,8 +99,11 @@ async def create_new_pair(pairs: list[str], auth=Depends(authenticate)):
 
 
 @router.post("/adapter_classes/{adapter_class:str}/reload", response_model=type(None))
-async def reload_getter(adapter_class: str, auth=Depends(authenticate)):
-    refresh.reload_adapter(adapter_class)
+async def reload_adapter_class(adapter_class: str, auth=Depends(authenticate)):
+    try:
+        refresh.reload_adapter(adapter_class)
+    except refresh.AdapterDoNotExistException():
+        raise HTTPException(404)
 
 
 @router.get("/getters/")
