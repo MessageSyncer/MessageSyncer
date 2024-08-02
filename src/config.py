@@ -134,4 +134,3 @@ class MainConfig:
 
 main_manager = get_config_manager(MainConfig, 'main')
 main = main_manager.value
-verbose = main.logging.verbose

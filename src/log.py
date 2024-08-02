@@ -20,7 +20,7 @@ class ListHandler(logging.Handler):
 
 def get_logging_handlers(log_name):
     import config
-    list_level = file_level = console_level = logging.DEBUG if config.verbose else logging.INFO
+    list_level = file_level = console_level = logging.DEBUG if config.main_manager.value.logging.verbose else logging.INFO
     log_file = path / f'{log_name}-{datetime.now().strftime("%Y-%m-%d-%H-%M-%S")}.log'
     format = '%(asctime)s[%(levelname)s][%(name)s] %(message)s'
 

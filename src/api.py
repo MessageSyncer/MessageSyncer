@@ -17,8 +17,6 @@ from fastapi.responses import JSONResponse, RedirectResponse
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 
-app = FastAPI(title='MessageSyncerAPI')
-router = APIRouter(prefix='/api')
 HOST = '0.0.0.0'
 PORT = config.main.api.port
 
@@ -26,6 +24,9 @@ PORT = config.main.api.port
 # If a destructive update is made, use this field to control the response model of API.
 # [20240702]
 VERSION = 20240702
+
+app = FastAPI(title='MessageSyncerAPI', version=str(VERSION))
+router = APIRouter(prefix='/api')
 
 
 @app.exception_handler(Exception)
