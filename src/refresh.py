@@ -96,11 +96,6 @@ def install_adapter(name: str, type_: type):
 
 
 def get_adapter_class(adapter_class_name, type_: type):
-    if type_ == Getter:
-        path = getters.path
-    elif type_ == Pusher:
-        path = pushers.path
-
     try:
         return importing.details[adapter_class_name].obj
     except KeyError:
