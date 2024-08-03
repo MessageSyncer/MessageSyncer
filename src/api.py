@@ -18,7 +18,7 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 
 HOST = '0.0.0.0'
-PORT = config.main.api.port
+PORT = config.main().api.port
 
 # Update this field every time when a destructive update is made.
 # If a destructive update is made, use this field to control the response model of API.
@@ -40,7 +40,7 @@ async def generic_exception_handler(request: Request, exc: HTTPException):
 
 
 def authenticate(credentials: HTTPAuthorizationCredentials = Depends(HTTPBearer())):
-    if not credentials.credentials in config.main_manager.value.api.token:
+    if not credentials.credentials in config.main().api.token:
         raise HTTPException(403)
     return True
 
@@ -92,10 +92,15 @@ async def hello_world() -> dict:
 
 @router.post("/pairs/", description='We usually donot use it now because getters cannot be automatically overloaded when this api is designed.')
 async def create_new_pair(pairs: list[str], auth=Depends(authenticate)):
-    _config = config.main_manager.value
+    _config = config.main()
     _config.pair.extend(pairs)
     config.main_manager.save(_config)
-    refresh.refresh_getters()
+    refresh.update_getters()
+
+
+@router.post("/pairs/update_getters")
+async def update_getters(auth=Depends(authenticate)):
+    refresh.update_getters()
 
 
 @router.post("/adapter_classes/{adapter_class:str}/reload", response_model=type(None))

@@ -25,7 +25,7 @@ class AdapterDoNotExistException(Exception):
 
 def register_getter(getter: Getter):
     refresh_trigger(getter)
-    if config.main_manager.value.refresh_when_start:
+    if config.main().refresh_when_start:
         asyncio.create_task(refresh(getter))
     registered_getters.append(getter)
     logging.debug(f'Getter registered: {getter}')
@@ -88,7 +88,7 @@ def reload_adapter(name: str):
         for getter in registered_getters.copy():
             if getter.class_name == name:
                 unregister_getter(getter)
-        refresh_getters()
+        update_getters()
 
 
 def install_adapter(name: str, type_: type):
@@ -97,7 +97,7 @@ def install_adapter(name: str, type_: type):
     elif type_ == Pusher:
         path = pushers.path/name
     clone_from_vcs(
-        config.main.url.get(name, f'https://github.com/MessageSyncer/{name}'),
+        config.main().url.get(name, f'https://github.com/MessageSyncer/{name}'),
         path)
     importing.import_all([pushers.path, getters.path])
     return importing.details[name]
@@ -112,7 +112,7 @@ def get_adapter_class(adapter_class_name, type_: type):
 
 def parse_pairs():
     result: dict[Getter, list[str]] = {}
-    for pair_str in config.main.pair:
+    for pair_str in config.main().pair:
         pair_str: str
         pair_str = pair_str.split(' ', 1)
         getter_str = pair_str[0]
@@ -134,14 +134,18 @@ def parse_pairs():
     return result
 
 
-def refresh_getters():
+def update_getters():
     pairs_details = parse_pairs()
+    removed = []
+    added = []
     for getter in registered_getters:
         if not getter in pairs_details:
             unregister_getter(getter)
+            removed.append(getter)
     for getter in pairs_details:
         if not getter in registered_getters:
             register_getter(getter)
+            added.append(getter)
 
 
 async def refresh(getter: Getter):
@@ -185,11 +189,11 @@ async def _refresh_worker(getter: Getter):
                 push_passed_reason = []
 
                 if getter._first:
-                    if config.main_manager.value.first_get_donot_push:
+                    if config.main().first_get_donot_push:
                         push = False
                         push_passed_reason.append('first_get_donot_push')
 
-                for rule in config.main_manager.value.block:
+                for rule in config.main().block:
                     if re.match(rule, content_text) or re.search(rule, content_text):
                         push = False
                         push_passed_reason.append(f'triggers block "{rule}"')
@@ -218,7 +222,7 @@ async def _refresh_worker(getter: Getter):
                 list_.remove(id_)
 
         try:
-            if not config.main_manager.value.perf_merged_details:
+            if not config.main().perf_merged_details:
                 raise NotImplementedError()
 
             if list_:
@@ -249,7 +253,7 @@ async def _refresh_worker(getter: Getter):
         logger.error(f'Failed when refreshing: {e}', exc_info=True)
 
         getter._number_of_consecutive_failures += 1
-        if getter._number_of_consecutive_failures in config.main_manager.value.warning.consecutive_getter_failures_number_to_trigger_warning:
+        if getter._number_of_consecutive_failures in config.main().warning.consecutive_getter_failures_number_to_trigger_warning:
             await warning.warning(Struct().text(f'{getter} has failed to update {getter._number_of_consecutive_failures} times in a row.'))
 
     getter._working = False

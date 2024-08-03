@@ -15,7 +15,7 @@ import importing
 async def main():
     refresh.main_event_loop = asyncio.get_event_loop()
     importing.import_all([pushers.path, getters.path])
-    refresh.refresh_getters()
+    refresh.update_getters()
 
     api.serve()
     while True:

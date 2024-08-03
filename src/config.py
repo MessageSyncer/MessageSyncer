@@ -133,4 +133,6 @@ class MainConfig:
 
 
 main_manager = get_config_manager(MainConfig, 'main')
-main = main_manager.value
+
+def main():
+    return main_manager.value
