@@ -9,7 +9,7 @@ T1 = TypeVar('T1')
 
 
 class HotReloadConfigManager(Generic[T]):
-    def __init__(self, config_type: T, config_path: Path) -> None:
+    def __init__(self, config_path: Path, config_type: T = dict) -> None:
         self.config_type = config_type
         self.config_path = config_path
         self.lock = Lock()
@@ -87,23 +87,21 @@ class HotReloadConfigManager(Generic[T]):
             return config
 
     def dict(self):
-        with self.lock:
-            return yaml.load(self.yaml(), Loader=yaml.FullLoader)
+        return yaml.load(self.yaml(), Loader=yaml.FullLoader)
 
     @property
     def value(self) -> T:
-        with self.lock:
-            yaml_config = self.yaml()
-            dict_config = yaml.safe_load(yaml_config)
-            config = HotReloadConfigManager.from_dict(self.config_type, dict_config)
-            if self.asyaml(config) != yaml_config:
-                self.save(config)
-            return config
+        yaml_config = self.yaml()
+        dict_config = yaml.safe_load(yaml_config)
+        config = HotReloadConfigManager.from_dict(self.config_type, dict_config)
+        if self.asyaml(config) != yaml_config:
+            self.save(config)
+        return config
 
 
-def get_config_manager(config_type: Type[T], name) -> HotReloadConfigManager[T]:
+def get_config_manager(config_type: Type[T] = dict, name='main') -> HotReloadConfigManager[T]:
     config_file = path / f'{name}.yaml'
-    return HotReloadConfigManager(config_type, config_file)
+    return HotReloadConfigManager(config_type=config_type, config_path=config_file)
 
 
 @dataclass
@@ -122,8 +120,8 @@ class MainConfig:
         to: list[str] = field(default_factory=list[str])
         consecutive_getter_failures_number_to_trigger_warning: list[int] = field(default_factory=lambda: [2, 5, 10])
 
-    pair: list[str] = field(default_factory=list[str]) # list of pair, partially supports hotreload. Pushers take effect immediately. Getters does not support hotreload.
-    url: dict[str, str] = field(default_factory=dict[str, str]) # url of Adapter. Such as `git+https://github.com/user/repo`
+    pair: list[str] = field(default_factory=list[str])  # list of pair, partially supports hotreload. Pushers take effect immediately. Getters does not support hotreload.
+    url: dict[str, str] = field(default_factory=dict[str, str])  # url of Adapter. Such as `git+https://github.com/user/repo`
     warning: Warning = field(default_factory=Warning)
     logging: LoggingConfig = field(default_factory=LoggingConfig)
     api: APIConfig = field(default_factory=APIConfig)
@@ -134,13 +132,14 @@ class MainConfig:
     # When refresh_when_start is False and it has been a long time since the last MessageSynser refresh, it is recommended to manually perform a refresh after MessageSynser is started.
     refresh_when_start: bool = True
     first_get_donot_push: bool = True
-    
+
     block: list[str] = field(default_factory=list[str])
     perf_merged_details: bool = True
     proxies: dict[str, str] = field(default_factory=dict[str, str])  # This field will be passed directly to requests.request
 
 
 main_manager = get_config_manager(MainConfig, 'main')
+
 
 def main():
     return main_manager.value

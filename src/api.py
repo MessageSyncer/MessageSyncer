@@ -111,6 +111,16 @@ async def reload_adapter_class(adapter_class: str, auth=Depends(authenticate)):
         raise HTTPException(404)
 
 
+@router.get("/config/{config_name:str}")
+async def get_config(config_name: str, auth=Depends(authenticate)) -> dict:
+    return config.get_config_manager(name=config_name).dict()
+
+
+@router.post("/config/{config_name:str}")
+async def update_config(config_name: str, new: dict, auth=Depends(authenticate)):
+    config.get_config_manager(name=config_name).save(new)
+
+
 @router.get("/getters/")
 async def list_all_getters(auth=Depends(authenticate)) -> list[GetterInfo]:
     return [
