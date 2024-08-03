@@ -1,3 +1,4 @@
+from threading import Lock
 from util import *
 from dataclasses import dataclass, field, asdict
 from typing import TypeVar, Generic, Type
@@ -11,10 +12,12 @@ class HotReloadConfigManager(Generic[T]):
     def __init__(self, config_type: T, config_path: Path) -> None:
         self.config_type = config_type
         self.config_path = config_path
+        self.lock = Lock()
 
         if not self.config_path.exists():
             self.save(self.config_type())
 
+    @staticmethod
     def allow_dict_access(data_type):
         """
         The shift from using dict as the profile type to using dataclass as the profile type is a disruptive change from Pusher to MessageSyncer.
@@ -27,7 +30,7 @@ class HotReloadConfigManager(Generic[T]):
         def __getter__(self: object, key, default=None):
             try:
                 return self.__getattribute__(key)
-            except AttributeError as e:
+            except AttributeError:
                 return default
 
         def get(self, key, default=None):
@@ -40,6 +43,7 @@ class HotReloadConfigManager(Generic[T]):
         data_type.get = get
         data_type.__getitem__ = __getitem__
 
+    @staticmethod
     def from_dict(data_type: T, data: dict) -> T:
         # TODO: remove dict access support
         """Instantiate data classes from dictionaries, including working with nested data classes."""
@@ -50,7 +54,7 @@ class HotReloadConfigManager(Generic[T]):
         try:
             if data_type.__origin__ in [dict, list]:
                 return data
-        except:
+        except AttributeError:
             pass
 
         HotReloadConfigManager.allow_dict_access(data_type)
@@ -70,27 +74,31 @@ class HotReloadConfigManager(Generic[T]):
         return yaml.dump(self.asdict(config), default_flow_style=False, encoding='utf-8', allow_unicode=True).decode('utf-8')
 
     def save(self, config):
-        write_file(self.config_path, self.asyaml(config))
+        with self.lock:
+            write_file(self.config_path, self.asyaml(config))
 
     def yaml(self):
-        if self.config_path.exists():
-            config = read_file(self.config_path)
-        else:
-            self.config_path.touch()
-            config = "{}"
-        return config
+        with self.lock:
+            if self.config_path.exists():
+                config = read_file(self.config_path)
+            else:
+                self.config_path.touch()
+                config = "{}"
+            return config
 
     def dict(self):
-        return yaml.load(self.yaml(), Loader=yaml.FullLoader)
+        with self.lock:
+            return yaml.load(self.yaml(), Loader=yaml.FullLoader)
 
     @property
     def value(self) -> T:
-        yaml_config = self.yaml()
-        dict_config = yaml.safe_load(yaml_config)
-        config = HotReloadConfigManager.from_dict(self.config_type, dict_config)
-        if self.asyaml(config) != yaml_config:
-            self.save(config)
-        return config
+        with self.lock:
+            yaml_config = self.yaml()
+            dict_config = yaml.safe_load(yaml_config)
+            config = HotReloadConfigManager.from_dict(self.config_type, dict_config)
+            if self.asyaml(config) != yaml_config:
+                self.save(config)
+            return config
 
 
 def get_config_manager(config_type: Type[T], name) -> HotReloadConfigManager[T]:
