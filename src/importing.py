@@ -2,6 +2,7 @@ import importlib
 import sys
 import subprocess
 import logging
+import pkg_resources
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -21,17 +22,39 @@ class ObjectImportingDetail:
 details: dict[str, ObjectImportingDetail] = {}
 
 
+def install_package(package_name):
+    try:
+        logging.debug(f'Installing {package_name}')
+        subprocess.check_call([sys.executable, "-m", "pip", "install", package_name])
+        logging.debug(f'Installing {package_name} succeed')
+    except subprocess.CalledProcessError as e:
+        logging.debug(f'Installing {package_name} failed: {e}')
+
+
 def try_install_requirements(path: Path):
-    # Check if requirements.txt exists
     requirements_file = path / 'requirements.txt'
+
     if not requirements_file.exists():
         return
 
-    # Use subprocess to call pip to install dependencies
-    try:
-        subprocess.check_call(['pip', 'install', '-r', str(requirements_file)])
-    except subprocess.CalledProcessError as e:
-        logging.warning(f"Installation for requirements.txt failed: {e}")
+    with open(requirements_file, 'r') as file:
+        requirements = file.readlines()
+
+    installed_packages = pkg_resources.working_set
+    installed_packages_list = sorted(["%s==%s" % (i.key, i.version) for i in installed_packages])
+    logger = logging.getLogger('requirements_checker')
+
+    for requirement in requirements:
+        requirement = requirement.strip()
+        try:
+            pkg_resources.require(requirement)
+            logger.debug(f"{requirement} is installed")
+        except pkg_resources.DistributionNotFound:
+            logger.debug(f"{requirement} is not installed")
+            install_package(requirement)
+        except pkg_resources.VersionConflict as e:
+            logger.debug(f"{requirement} has a version conflict: {e.report()}")
+            install_package(requirement)
 
 
 def export_all_from_module(module, module_path, do_cover=False):
