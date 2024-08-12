@@ -7,7 +7,7 @@ from unittest.mock import patch
 
 
 def _process_proxy(dict_: dict):
-    dict_.setdefault('proxies', config.main_manager.value.proxies)
+    dict_.setdefault('proxies', config.main().proxies)
     return dict_
 
 

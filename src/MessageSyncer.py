@@ -7,11 +7,15 @@ import config
 import refresh
 import log
 import api
+import getters
+import pushers
+import importing
 
 
 async def main():
     refresh.main_event_loop = asyncio.get_event_loop()
-    refresh.refresh_getters()
+    importing.import_all([pushers.path, getters.path])
+    refresh.update_getters()
 
     api.serve()
     while True:

@@ -18,7 +18,7 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 
 HOST = '0.0.0.0'
-PORT = config.main.api.port
+PORT = config.main().api.port
 
 # Update this field every time when a destructive update is made.
 # If a destructive update is made, use this field to control the response model of API.
@@ -40,7 +40,7 @@ async def generic_exception_handler(request: Request, exc: HTTPException):
 
 
 def authenticate(credentials: HTTPAuthorizationCredentials = Depends(HTTPBearer())):
-    if not credentials.credentials in config.main_manager.value.api.token:
+    if not credentials.credentials in config.main().api.token:
         raise HTTPException(403)
     return True
 
@@ -75,7 +75,7 @@ class Article():
     id: str
     userId: str
     ts: int
-    content: list
+    content: list[dict]
 
 
 @app.get("/", include_in_schema=False)
@@ -90,13 +90,35 @@ async def hello_world() -> dict:
     })
 
 
-@router.post("/pairs/")
+@router.post("/pairs/", description='We usually donot use it now because getters cannot be automatically overloaded when this api is designed.')
 async def create_new_pair(pairs: list[str], auth=Depends(authenticate)):
-    # We usually don't use it now because getters cannot be automatically overloaded when this api is designed
-    _config = config.main_manager.value
+    _config = config.main()
     _config.pair.extend(pairs)
     config.main_manager.save(_config)
-    refresh.refresh_getters()
+    refresh.update_getters()
+
+
+@router.post("/pairs/update_getters")
+async def update_getters(auth=Depends(authenticate)):
+    refresh.update_getters()
+
+
+@router.post("/adapter_classes/{adapter_class:str}/reload", response_model=type(None))
+async def reload_adapter_class(adapter_class: str, auth=Depends(authenticate)):
+    try:
+        refresh.reload_adapter(adapter_class)
+    except refresh.AdapterDoNotExistException():
+        raise HTTPException(404)
+
+
+@router.get("/config/{config_name:str}")
+async def get_config(config_name: str, auth=Depends(authenticate)) -> dict:
+    return config.get_config_manager(name=config_name).dict()
+
+
+@router.post("/config/{config_name:str}")
+async def update_config(config_name: str, new: dict, auth=Depends(authenticate)):
+    config.get_config_manager(name=config_name).save(new)
 
 
 @router.get("/getters/")
