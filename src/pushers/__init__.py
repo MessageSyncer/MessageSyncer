@@ -1,12 +1,8 @@
 from model import *
 from util import *
+import importing
 
-pushers_inited: list[Pusher] = []
 path = Path() / 'pushers'
-
-
-class PusherNotFoundException(Exception):
-    pass
 
 
 def parse_pusher(pusher):
@@ -21,24 +17,14 @@ def parse_pusher(pusher):
     return pusher, pusher_id, pusher_to
 
 
-def get_pusher(pusher) -> tuple[Pusher, dict]:
+def _get_pusher(pusher) -> tuple[Pusher, dict]:
     pusher_class, pusher_id, pusher_to = parse_pusher(pusher)
-    if matched := [_pusher for _pusher in pushers_inited if _pusher.name == f'{pusher_class}.{pusher_id}']:
-        pusher = matched[0]
-    else:
-        try:
-            pusher = import_all_to_dict(path)[pusher_class](pusher_id)
-        except KeyError:
-            raise PusherNotFoundException()
-        pushers_inited.append(pusher)
-
-        logging.debug(f'{pusher} initialized')
-
+    pusher = importing.details[pusher_class].obj(pusher_id)
     return pusher, {'to': pusher_to}
 
 
 async def push_to(pusher, content: Struct):
-    pusher, detail = get_pusher(pusher)
+    pusher, detail = _get_pusher(pusher)
 
     logger = pusher.logger.getChild(f'{hash(content)}')
     logger.debug(f'Start to push {hash(content)}')

@@ -1,3 +1,4 @@
+from threading import Lock
 from util import *
 from dataclasses import dataclass, field, asdict
 from typing import TypeVar, Generic, Type
@@ -8,13 +9,15 @@ T1 = TypeVar('T1')
 
 
 class HotReloadConfigManager(Generic[T]):
-    def __init__(self, config_type: T, config_path: Path) -> None:
+    def __init__(self, config_path: Path, config_type: T = dict) -> None:
         self.config_type = config_type
         self.config_path = config_path
+        self.lock = Lock()
 
         if not self.config_path.exists():
             self.save(self.config_type())
 
+    @staticmethod
     def allow_dict_access(data_type):
         """
         The shift from using dict as the profile type to using dataclass as the profile type is a disruptive change from Pusher to MessageSyncer.
@@ -27,7 +30,7 @@ class HotReloadConfigManager(Generic[T]):
         def __getter__(self: object, key, default=None):
             try:
                 return self.__getattribute__(key)
-            except AttributeError as e:
+            except AttributeError:
                 return default
 
         def get(self, key, default=None):
@@ -40,9 +43,9 @@ class HotReloadConfigManager(Generic[T]):
         data_type.get = get
         data_type.__getitem__ = __getitem__
 
+    @staticmethod
     def from_dict(data_type: T, data: dict) -> T:
         # TODO: remove dict access support
-        # FIXME: check
         """Instantiate data classes from dictionaries, including working with nested data classes."""
 
         if data_type in [dict, int, str, list, float, None]:
@@ -51,7 +54,7 @@ class HotReloadConfigManager(Generic[T]):
         try:
             if data_type.__origin__ in [dict, list]:
                 return data
-        except:
+        except AttributeError:
             pass
 
         HotReloadConfigManager.allow_dict_access(data_type)
@@ -71,15 +74,17 @@ class HotReloadConfigManager(Generic[T]):
         return yaml.dump(self.asdict(config), default_flow_style=False, encoding='utf-8', allow_unicode=True).decode('utf-8')
 
     def save(self, config):
-        write_file(self.config_path, self.asyaml(config))
+        with self.lock:
+            write_file(self.config_path, self.asyaml(config))
 
     def yaml(self):
-        if self.config_path.exists():
-            config = read_file(self.config_path)
-        else:
-            self.config_path.touch()
-            config = "{}"
-        return config
+        with self.lock:
+            if self.config_path.exists():
+                config = read_file(self.config_path)
+            else:
+                self.config_path.touch()
+                config = "{}"
+            return config
 
     def dict(self):
         return yaml.load(self.yaml(), Loader=yaml.FullLoader)
@@ -94,9 +99,9 @@ class HotReloadConfigManager(Generic[T]):
         return config
 
 
-def get_config_manager(config_type: Type[T], name) -> HotReloadConfigManager[T]:
+def get_config_manager(config_type: Type[T] = dict, name='main') -> HotReloadConfigManager[T]:
     config_file = path / f'{name}.yaml'
-    return HotReloadConfigManager(config_type, config_file)
+    return HotReloadConfigManager(config_type=config_type, config_path=config_file)
 
 
 @dataclass
@@ -115,23 +120,26 @@ class MainConfig:
         to: list[str] = field(default_factory=list[str])
         consecutive_getter_failures_number_to_trigger_warning: list[int] = field(default_factory=lambda: [2, 5, 10])
 
-    pair: list[str] = field(default_factory=list[str]) # list of pair, partially supports hotreload. Pushers take effect immediately. Getters does not support hotreload.
-    url: dict[str, str] = field(default_factory=dict[str, str]) # url of Adapter. Such as `git+https://github.com/user/repo`
+    pair: list[str] = field(default_factory=list[str])  # list of pair, partially supports hotreload. Pushers take effect immediately. Getters does not support hotreload.
+    url: dict[str, str] = field(default_factory=dict[str, str])  # url of Adapter. Such as `git+https://github.com/user/repo`
     warning: Warning = field(default_factory=Warning)
     logging: LoggingConfig = field(default_factory=LoggingConfig)
     api: APIConfig = field(default_factory=APIConfig)
 
-    # Pre-refresh is performed when Getter is registered. The results of each Getter's first refresh will not be pushed.
-    # The recommendation is True.
-    # When it is False and it has been a long time since the last MessageSynser refresh, it is recommended to manually perform a refresh after MessageSynser is started.
+    # Pre-refresh will be executed when Getter is registered if refresh_when_start.
+    # The results of each Getter's first refresh will not be pushed if first_get_donot_push.
+    # The recommendation is True and True.
+    # When refresh_when_start is False and it has been a long time since the last MessageSynser refresh, it is recommended to manually perform a refresh after MessageSynser is started.
     refresh_when_start: bool = True
     first_get_donot_push: bool = True
-    
+
     block: list[str] = field(default_factory=list[str])
     perf_merged_details: bool = True
     proxies: dict[str, str] = field(default_factory=dict[str, str])  # This field will be passed directly to requests.request
 
 
 main_manager = get_config_manager(MainConfig, 'main')
-main = main_manager.value
-verbose = main.logging.verbose
+
+
+def main():
+    return main_manager.value

@@ -1,11 +1,11 @@
 import config
 from model import *
-from pushers import get_pusher, push_to
+from pushers import push_to
 
 
 async def warning(content: Struct):
     try:
-        pushto = config.main_manager.value.warning.to
+        pushto = config.main().warning.to
         for pusher in pushto:
             await push_to(pusher, content)
     except Exception as e:
