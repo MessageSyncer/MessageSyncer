@@ -48,7 +48,7 @@ def try_install_requirements(path: Path):
         requirement = requirement.strip()
         try:
             pkg_resources.require(requirement)
-            logger.debug(f"{requirement} is installed")
+            logger.debug(f"{requirement} already satisfied")
         except pkg_resources.DistributionNotFound:
             logger.debug(f"{requirement} is not installed")
             install_package(requirement)
