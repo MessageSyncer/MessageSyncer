@@ -173,11 +173,12 @@ async def list_log(page: int = 0, page_size: int = 10, auth=Depends(authenticate
 app.include_router(router)
 
 
-def serve():
+async def serve():
     server = uvicorn.Server(uvicorn.Config(app, host=HOST, port=PORT, log_level='info', log_config={"version": 1, "disable_existing_loggers": False, "formatters": {}, "handlers": {}, "loggers": {"uvicorn": {"handlers": [], "level": "INFO", "propagate": False}, "uvicorn.error": {"handlers": [], "level": "INFO", "propagate": False}, "uvicorn.access": {"handlers": [], "level": "INFO", "propagate": False}, }, }))
 
     logging.getLogger('uvicorn').handlers = logging.root.handlers
     logging.getLogger('uvicorn.error').handlers = logging.root.handlers
     logging.getLogger('uvicorn.error').name = 'uvicorn'
     logging.getLogger('uvicorn.access').handlers = logging.root.handlers
-    asyncio.create_task(server.serve())
+
+    await server.serve()

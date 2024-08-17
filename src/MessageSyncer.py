@@ -17,10 +17,11 @@ async def main():
     importing.import_all([pushers.path, getters.path])
     refresh.update_getters()
 
-    api.serve()
-    while True:
-        await asyncio.sleep(3600)
+    await api.serve()
 
 if __name__ == '__main__':
     logging.info(f'MessageSyncer started at {Path().absolute()}')
-    asyncio.run(main())
+    try:
+        asyncio.run(main())
+    except KeyboardInterrupt:
+        logging.info(f'MessageSyncer exited')
