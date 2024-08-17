@@ -108,7 +108,7 @@ class Struct:
         if type(content) == Struct:
             if title != '':
                 title = title + '\n'
-            result.text(f"{title}")
+                result.text(f"{title}")
             result.extend(content)
         else:
             if title != '':
