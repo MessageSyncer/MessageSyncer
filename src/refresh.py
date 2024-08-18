@@ -78,13 +78,13 @@ def stop_corn(getter: Getter, trigger: str):
 
 def reload_adapter(name: str):
     try:
-        type_ = importing.details[name].obj.__orig_bases__[0].__origin__
+        parent_classes = importing.details[name].obj.__bases__
     except:
         raise AdapterDoNotExistException()
     importing.details[name].reload()
     new_adapter_class = importing.details[name].obj
 
-    if type_ == Getter:
+    if Getter in parent_classes:
         for getter in registered_getters.copy():
             if getter.class_name == name:
                 unregister_getter(getter)
