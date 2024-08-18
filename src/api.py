@@ -90,7 +90,7 @@ async def hello_world() -> dict:
     })
 
 
-@router.post("/pairs/", description='We usually donot use it now because getters cannot be automatically overloaded when this api is designed.')
+@router.post("/pairs/", deprecated=True)
 async def create_new_pair(pairs: list[str], auth=Depends(authenticate)):
     _config = config.main()
     _config.pair.extend(pairs)

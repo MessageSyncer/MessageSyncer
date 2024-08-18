@@ -106,7 +106,7 @@ def install_adapter(name: str, type_: type):
 
 
 def get_adapter_class(adapter_class_name, type_: type):
-    logging.debug(f'Seeking adapter_class {adapter_class_name}')
+    # logging.debug(f'Seeking adapter_class {adapter_class_name}')
     try:
         return importing.details[adapter_class_name].obj
     except KeyError:

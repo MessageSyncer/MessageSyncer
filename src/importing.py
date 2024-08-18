@@ -17,14 +17,18 @@ class ObjectImportingDetail:
 
     def reload(self) -> bool:
         global details
+        logger = logging.getLogger(f'reload-{self.attr_name}')
+        logger.debug('Start reload module')
 
         if self.path.exists():
             if not self.path.is_file():
                 try_install_requirements(self.path)
             export_all_from_module(importlib.reload(self.module), self.module_name, self.path)
+            logger.debug('Succeed')
             return True
         else:
             details.pop(self.attr_name)
+            logger.debug('Failed')
             return False
 
 
