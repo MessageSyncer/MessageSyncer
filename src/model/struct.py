@@ -115,6 +115,6 @@ class Struct:
                 title = title + '\n\n'
             result.text(f"{title}{content}")
         result.image(images)
-        result.text(f"\n\n{username}{datetime.fromtimestamp(ts).strftime('%H:%M')}{ip}{detail}{url}")
+        result.text(f"\n{username}{datetime.fromtimestamp(ts).strftime('%H:%M')}{ip}{detail}{url}")
 
         return result
