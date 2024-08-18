@@ -97,6 +97,7 @@ def install_adapter(name: str, type_: type):
         path = getters.path/name
     elif type_ == Pusher:
         path = pushers.path/name
+    logging.debug(f'Start to install {name}')
     clone_from_vcs(
         config.main().url.get(name, f'https://github.com/MessageSyncer/{name}'),
         path)
@@ -105,6 +106,7 @@ def install_adapter(name: str, type_: type):
 
 
 def get_adapter_class(adapter_class_name, type_: type):
+    logging.debug(f'Seeking adapter_class {adapter_class_name}')
     try:
         return importing.details[adapter_class_name].obj
     except KeyError:
@@ -121,15 +123,15 @@ def get_adapter_class(adapter_class_name, type_: type):
 def parse_pairs():
     result: dict[Getter, list[str]] = {}
     for pair_str in config.main().pair:
-        pair_str: str
-        getter_str, pusher_str = pair_str.split(' ', 1)
-        getter_class_name, getter_id = getters.parse_getter(getter_str)
-        pusher_class_name, _, _ = pushers.parse_pusher(pusher_str)
         try:
+            pair_str: str
+            getter_str, pusher_str = pair_str.split(' ', 1)
+            getter_class_name, getter_id = getters.parse_getter(getter_str)
+            pusher_class_name, _, _ = pushers.parse_pusher(pusher_str)
             getter_class = get_adapter_class(getter_class_name, Getter)
             pusher_class = get_adapter_class(pusher_class_name, Pusher)
         except Exception as e:
-            logging.warning(e)
+            logging.warning(f'Failed to parse {pair_str} beacuse {e}. Skipped')
             continue
 
         if (matched := [_getter for _getter in registered_getters if _getter.name == getter_str]):
@@ -179,7 +181,7 @@ async def _refresh_worker(getter: Getter):
 
     logger.debug('Refreshing')
     if not getter.available:
-        logger.debug(f'Unavailable. Passed')
+        logger.debug(f'Unavailable. Skipped')
         return {}
 
     getter._working = True

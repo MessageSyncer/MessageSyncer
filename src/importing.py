@@ -70,7 +70,7 @@ def export_all_from_module(module, module_name, module_path):
     for attr in dir(module):
         if (not attr in details or do_cover) and not attr.startswith('_'):
             details[attr] = ObjectImportingDetail(attr, getattr(module, attr), module, module_name, module_path)
-
+    logging.debug(f'{module_name} loaded from {module_path}')
 
 def import_all(paths):
     for path in paths:
