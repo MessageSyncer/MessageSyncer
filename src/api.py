@@ -15,6 +15,7 @@ from pydantic import BaseModel
 from fastapi import FastAPI, HTTPException, Depends, APIRouter, Response, Path, Header, Request
 from fastapi.responses import JSONResponse, RedirectResponse
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from fastapi.middleware.cors import CORSMiddleware
 
 
 HOST = '0.0.0.0'
@@ -27,6 +28,14 @@ VERSION = 20240702
 
 app = FastAPI(title='MessageSyncerAPI', version=str(VERSION))
 router = APIRouter(prefix='/api')
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=config.main().api.cors_allow_origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 @app.exception_handler(Exception)
