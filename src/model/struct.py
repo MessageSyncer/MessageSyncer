@@ -30,8 +30,11 @@ class StructImage(StructElement):
     source: str
     alt: str = ''
 
+    def __str__(self) -> str:
+        return '\n'
+
     def asmarkdown(self) -> str:
-        return f'![{self.alt}]({self.source})'
+        return f'![{self.alt}]({self.source})\n'
 
 
 types = {
@@ -63,7 +66,7 @@ class Struct:
         elif type(source) == list:
             self.content.extend([type_(_source) for _source in source])
         return self
-    
+
     def extend(self, another: 'Struct') -> 'Struct':
         for content in another.content:
             self.content.append(content)
