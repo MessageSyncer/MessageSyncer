@@ -78,13 +78,14 @@ def stop_corn(getter: Getter, trigger: str):
 
 def reload_adapter(name: str):
     try:
-        type_ = importing.details[name].obj.__orig_bases__[0].__origin__
+        parent_classes = importing.details[name].obj.__bases__
     except:
         raise AdapterDoNotExistException()
-    importing.details[name].reload()
+    if not importing.details[name].reload():
+        importing.import_all([getters.path, pushers.path])
     new_adapter_class = importing.details[name].obj
 
-    if type_ == Getter:
+    if Getter in parent_classes:
         for getter in registered_getters.copy():
             if getter.class_name == name:
                 unregister_getter(getter)
@@ -96,31 +97,42 @@ def install_adapter(name: str, type_: type):
         path = getters.path/name
     elif type_ == Pusher:
         path = pushers.path/name
+    logging.debug(f'Start to install {name}')
     clone_from_vcs(
         config.main().url.get(name, f'https://github.com/MessageSyncer/{name}'),
         path)
-    importing.import_all([pushers.path, getters.path])
-    return importing.details[name]
+    importing.import_all([path/'..'])
+    return importing.details[name].obj
 
 
 def get_adapter_class(adapter_class_name, type_: type):
+    # logging.debug(f'Seeking adapter_class {adapter_class_name}')
     try:
         return importing.details[adapter_class_name].obj
     except KeyError:
-        return install_adapter(adapter_class_name, type_)
+        try:
+            importing.import_all([getters.path, pushers.path])
+            return importing.details[adapter_class_name].obj
+        except KeyError:
+            try:
+                return install_adapter(adapter_class_name, type_)
+            except:
+                raise Exception(f'Cannot find adapter_class {adapter_class_name}')
 
 
 def parse_pairs():
     result: dict[Getter, list[str]] = {}
     for pair_str in config.main().pair:
-        pair_str: str
-        pair_str = pair_str.split(' ', 1)
-        getter_str = pair_str[0]
-        pusher_str = pair_str[1]
-        getter_class_name, getter_id = getters.parse_getter(getter_str)
-        pusher_class_name, _, _ = pushers.parse_pusher(pusher_str)
-        getter_class = get_adapter_class(getter_class_name, Getter)
-        pusher_class = get_adapter_class(pusher_class_name, Pusher)
+        try:
+            pair_str: str
+            getter_str, pusher_str = pair_str.split(' ', 1)
+            getter_class_name, getter_id = getters.parse_getter(getter_str)
+            pusher_class_name, _, _ = pushers.parse_pusher(pusher_str)
+            getter_class = get_adapter_class(getter_class_name, Getter)
+            pusher_class = get_adapter_class(pusher_class_name, Pusher)
+        except Exception as e:
+            logging.warning(f'Failed to parse {pair_str} beacuse {e}. Skipped')
+            continue
 
         if (matched := [_getter for _getter in registered_getters if _getter.name == getter_str]):
             getter = matched[0]
@@ -169,7 +181,7 @@ async def _refresh_worker(getter: Getter):
 
     logger.debug('Refreshing')
     if not getter.available:
-        logger.debug(f'Unavailable. Passed')
+        logger.debug(f'Unavailable. Skipped')
         return {}
 
     getter._working = True

@@ -114,6 +114,7 @@ class MainConfig:
     class APIConfig:
         token: list[str] = field(default_factory=list[str])
         port: int = 11589
+        cors_allow_origins: list[str] = field(default_factory=lambda: [])
 
     @dataclass
     class Warning:
