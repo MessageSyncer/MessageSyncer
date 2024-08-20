@@ -82,10 +82,10 @@ class Struct:
         return result
 
     def __str__(self) -> str:
-        return '\n'.join([str(element) for element in self.content])
+        return ''.join([str(element) for element in self.content])
 
     def asmarkdown(self) -> str:
-        return '\n'.join([element.asmarkdown() for element in self.content])
+        return ''.join([element.asmarkdown() for element in self.content])
 
     @staticmethod
     def template1(
