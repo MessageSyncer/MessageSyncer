@@ -112,10 +112,16 @@ class Struct:
             if title != '':
                 title = title + '\n'
                 result.text(f"{title}")
+            # element_last = content.content[-1]
+            # if type(element_last) == StructText:
+            #    if not element_last.text.endswith('\n'):
+            #        element_last.text += '\n'
             result.extend(content)
-        else:
+        elif type(content) == str:
             if title != '':
                 title = title + '\n\n'
+            if not content.endswith('\n'):
+                content += '\n'
             result.text(f"{title}{content}")
         result.image(images)
         result.text(f"\n{username}{datetime.fromtimestamp(ts).strftime('%H:%M')}{ip}{detail}{url}")
