@@ -7,6 +7,7 @@ import refresh
 import pushers
 import time
 import store
+import importing
 
 from util import *
 from model import *
@@ -78,11 +79,24 @@ class GetterInfo():
     config: dict
     instance_config: dict
 
-    # version_commit: str = None  # If exists
-    
+    version_commit: str = None  # If exists
+
     @staticmethod
     def from_getter(getter: Getter):
-        return GetterInfo(name=getter.name, class_name=getter.class_name, working=getter._working, config=getter.config, instance_config=getter.instance_config)
+        getter_path = importing.details[getter.class_name].path
+        version_commit = None
+        if not getter_path.is_file():
+            try:
+                version_commit = get_current_commit(getter_path)
+            except:
+                pass
+        return GetterInfo(
+            name=getter.name,
+            class_name=getter.class_name,
+            working=getter._working,
+            config=getter.config,
+            instance_config=getter.instance_config,
+            version_commit=version_commit)
 
 
 @dataclass
