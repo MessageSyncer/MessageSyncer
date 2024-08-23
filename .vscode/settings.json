@@ -1,0 +1,8 @@
+{
+    "git.scanRepositories": [
+        "src/pushers",
+        "src/getters",
+        "data"
+    ],
+    "git.repositoryScanMaxDepth": -1
+}
