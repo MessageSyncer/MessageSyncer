@@ -78,6 +78,12 @@ class GetterInfo():
     config: dict
     instance_config: dict
 
+    # version_commit: str = None  # If exists
+    
+    @staticmethod
+    def from_getter(getter: Getter):
+        return GetterInfo(name=getter.name, class_name=getter.class_name, working=getter._working, config=getter.config, instance_config=getter.instance_config)
+
 
 @dataclass
 class Article():
@@ -134,7 +140,7 @@ async def update_config(config_name: str, new: dict, auth=Depends(authenticate))
 @router.get("/getters/")
 async def list_all_getters(auth=Depends(authenticate)) -> list[GetterInfo]:
     return [
-        asdict(GetterInfo(name=getter.name, class_name=getter.class_name, working=getter._working, config=getter.config, instance_config=getter.instance_config))
+        asdict(GetterInfo.from_getter(getter))
         for getter in refresh.registered_getters
     ]
 
@@ -147,8 +153,7 @@ async def refresh_getters(auth=Depends(authenticate)):
 
 @router.get("/getters/{getter:str}")
 async def getter(getter: str, auth=Depends(authenticate)) -> GetterInfo:
-    _getter = get_getter(getter)
-    return asdict(GetterInfo(name=_getter.name, class_name=_getter.class_name, working=_getter._working, config=_getter.config, instance_config=_getter.instance_config))
+    return asdict(GetterInfo.from_getter(get_getter(getter)))
 
 
 @router.post("/getters/{getter:str}/refresh", response_model=type(None))
