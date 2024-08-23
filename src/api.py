@@ -8,10 +8,11 @@ import pushers
 import time
 import store
 import importing
+import uuid
 
 from util import *
 from model import *
-from typing import Annotated, Optional
+from typing import Annotated, Optional, Any, Union
 from pydantic import BaseModel
 from fastapi import FastAPI, HTTPException, Depends, APIRouter, Response, Path, Header, Request
 from fastapi.responses import JSONResponse, RedirectResponse
@@ -79,7 +80,7 @@ class GetterInfo():
     config: dict
     instance_config: dict
 
-    version_commit: str = None  # If exists
+    version_commit: Optional[str] = None  # If exists
 
     @staticmethod
     def from_getter(getter: Getter):
@@ -105,6 +106,17 @@ class Article():
     userId: str
     ts: int
     content: list[dict]
+
+
+# Task control
+tasks = {}
+
+
+def start_task(coroutine):
+    task = asyncio.create_task(coroutine)
+    taskid = str(uuid.uuid4())
+    tasks[taskid] = task
+    return JSONResponse(taskid, 202)
 
 
 @app.get("/", include_in_schema=False)
@@ -159,10 +171,15 @@ async def list_all_getters(auth=Depends(authenticate)) -> list[GetterInfo]:
     ]
 
 
-@router.post("/getters/refresh", response_model=type(None))
-async def refresh_getters(auth=Depends(authenticate)):
-    for getter in refresh.registered_getters:
-        asyncio.create_task(refresh.refresh(getter))
+async def _refresh(getters):
+    result = []
+    [result.extend(await refresh.refresh(getter)) for getter in getters]
+    return result
+
+
+@router.post("/getters/refresh")
+async def refresh_getters_async(auth=Depends(authenticate)) -> refresh.RefreshResult:
+    return start_task(_refresh(refresh.registered_getters))
 
 
 @router.get("/getters/{getter:str}")
@@ -170,9 +187,9 @@ async def getter(getter: str, auth=Depends(authenticate)) -> GetterInfo:
     return asdict(GetterInfo.from_getter(get_getter(getter)))
 
 
-@router.post("/getters/{getter:str}/refresh", response_model=type(None))
-async def refresh_getter(getter: str, auth=Depends(authenticate)):
-    asyncio.create_task(refresh.refresh(get_getter(getter)))
+@router.post("/getters/{getter:str}/refresh")
+async def refresh_getter_async(getter: str, auth=Depends(authenticate)) -> refresh.RefreshResult:
+    return start_task(_refresh(get_getter(getter)))
 
 
 @router.get("/articles/")
@@ -198,6 +215,18 @@ async def list_log(page: int = 0, page_size: int = 10, auth=Depends(authenticate
     start_index = max(0, len(data_list) - (page + 1) * page_size)
     end_index = len(data_list) - page * page_size
     return data_list[start_index:end_index]
+
+
+@router.get("/task/{task_id}")
+async def task_status(task_id: str, auth=Depends(authenticate)) -> Union[refresh.RefreshResult]:
+    try:
+        task: asyncio.Task = tasks[task_id]
+    except KeyError:
+        raise HTTPException(404)
+    if task.done():
+        return task.result()
+    else:
+        return Response(None, 202)
 
 app.include_router(router)
 
