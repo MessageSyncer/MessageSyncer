@@ -105,6 +105,11 @@ def get_config_manager(config_type: Type[T] = dict, name='main') -> HotReloadCon
 
 
 @dataclass
+class MessageSyncerDetail:
+    version_commit: str = ''
+
+
+@dataclass
 class MainConfig:
     @dataclass
     class LoggingConfig:
@@ -144,3 +149,7 @@ main_manager = get_config_manager(MainConfig, 'main')
 
 def main():
     return main_manager.value
+
+
+def messagesyncer_detail() -> MessageSyncerDetail:
+    return MessageSyncerDetail(get_current_commit(Path('..')))

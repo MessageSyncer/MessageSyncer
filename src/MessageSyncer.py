@@ -20,6 +20,7 @@ async def main():
 
 if __name__ == '__main__':
     logging.info(f'MessageSyncer started at {Path().absolute()}')
+    logging.info(f'Commit: {config.messagesyncer_detail().version_commit}')
     try:
         asyncio.run(main())
     except KeyboardInterrupt:

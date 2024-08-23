@@ -95,7 +95,8 @@ async def _():
 @router.get("/")
 async def hello_world() -> dict:
     return JSONResponse({
-        "version": VERSION
+        "version": VERSION,
+        "MessageSyncer_version_commit": config.messagesyncer_detail().version_commit
     })
 
 

@@ -1,3 +1,4 @@
+import git
 import base64
 import shutil
 import json
@@ -131,3 +132,14 @@ def get_key_by_value(dictionary, value):
 
 def byte_to_MB(byte):
     return byte / (1024**2)
+
+
+def get_current_commit(repo_path: Path) -> str:
+    """
+    Gets the current commit hash value for the specified warehouse.
+
+    :return: The hash value of the current commit
+    """
+    repo = git.Repo(str(repo_path))
+    current_commit = repo.head.commit.hexsha
+    return current_commit
