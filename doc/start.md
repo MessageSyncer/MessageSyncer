@@ -15,7 +15,7 @@ This is a table of terms of MessageSyncer to help you understand the meaning of 
 
 ## Usage
 1. `git clone`
-1. `cd src`
+1. run setup script
 1. Start process by `python MessageSyncer.py`
 1. Close process 
 1. Edit config. see [config.py-MainConfig](../src/config.py)
