@@ -140,6 +140,7 @@ class MainConfig:
     first_get_donot_push: bool = True
 
     block: list[str] = field(default_factory=list[str])
+    article_max_ageday: int = 180 # Articles exceeding the number of days corresponding to this number will not be pushed
     perf_merged_details: bool = True
     proxies: dict[str, str] = field(default_factory=dict[str, str])  # This field will be passed directly to requests.request
 

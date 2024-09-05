@@ -220,6 +220,10 @@ async def _refresh_worker(getter: Getter) -> RefreshResult:
                         push = False
                         push_passed_reason.append(f'triggers block "{rule}"')
 
+                if (time.time() - result.ts)/3600/24 > config.main().article_max_ageday:
+                    push = False
+                    push_passed_reason.append('exceed article_max_ageday')
+
                 if push:
                     for push_detail in parse_pairs()[getter]:
                         try:
