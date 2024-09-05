@@ -6,4 +6,4 @@ Requests
 fastapi
 uvicorn
 colorlog
-pkg_resources
+GitPython

@@ -13,6 +13,7 @@ import warning
 import getters
 import pushers
 import importing
+import concurrent
 import util
 
 registered_getters: list[Getter] = []
@@ -159,22 +160,29 @@ def update_getters():
             register_getter(getter)
             added.append(getter)
 
+@dataclass
+class RefreshResultSingle(GetResult):
+    content: list[dict]
 
-async def refresh(getter: Getter):
+
+RefreshResult = list[RefreshResultSingle]
+
+
+async def refresh(getter: Getter) -> RefreshResult:
     refresh_trigger(getter)
 
-    def thread_worker():
+    async def thread_worker():
         with network.force_proxies_patch():
-            result_data = asyncio.run(_refresh_worker(getter))
+            result_data = await _refresh_worker(getter)
             return result_data
 
-    with ThreadPoolExecutor() as executor:
-        result = asyncio.get_running_loop().run_in_executor(executor, thread_worker)
-
+    loop = asyncio.get_event_loop()
+    with concurrent.futures.ThreadPoolExecutor() as executor:
+        result = await loop.run_in_executor(executor, lambda: asyncio.run(thread_worker()))
     return result
 
 
-async def _refresh_worker(getter: Getter):
+async def _refresh_worker(getter: Getter) -> RefreshResult:
     logger = getter.logger
     getter_type = getter.__class__.__name__
     getter_prefix = getter_type + '_'
@@ -182,10 +190,11 @@ async def _refresh_worker(getter: Getter):
     logger.debug('Refreshing')
     if not getter.available:
         logger.debug(f'Unavailable. Skipped')
-        return {}
+        return []
 
     getter._working = True
 
+    new_articles_during_fresh = []
     try:
         list_ = await getter.list()
         list_ = [getter_prefix + id for id in list_]
@@ -193,6 +202,7 @@ async def _refresh_worker(getter: Getter):
 
         async def process_result(result: GetResult, logger: logging.Logger):
             try:
+                new_articles_during_fresh.append(RefreshResultSingle(result.user_id, result.ts, result.content.asdict()))
                 content = result.content
                 content_text = str(content)
                 # logger.info(content_text)
@@ -269,4 +279,4 @@ async def _refresh_worker(getter: Getter):
             await warning.warning(Struct().text(f'{getter} has failed to update {getter._number_of_consecutive_failures} times in a row.'))
 
     getter._working = False
-    return {}  # TODO: finish it
+    return new_articles_during_fresh
