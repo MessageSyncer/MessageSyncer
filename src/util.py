@@ -140,6 +140,9 @@ def get_current_commit(repo_path: Path) -> str:
 
     :return: The hash value of the current commit
     """
-    repo = git.Repo(str(repo_path))
-    current_commit = repo.head.commit.hexsha
-    return current_commit
+    try:
+        repo = git.Repo(str(repo_path))
+        current_commit = repo.head.commit.hexsha
+        return current_commit
+    except:
+        return ''

@@ -1,0 +1,10 @@
+services:
+  MessageSyncer:
+    container_name: MessageSyncer
+    image: ghcr.io/MessageSyncer/MessageSyncer:latest
+    restart: unless-stopped
+    ports:
+      - 11589:11589
+    volumes:
+      - ../data:/MessageSyncer/data
+      - /etc/localtime:/etc/localtime:ro
