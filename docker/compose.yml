@@ -1,7 +1,7 @@
 services:
   MessageSyncer:
     container_name: MessageSyncer
-    image: ghcr.io/MessageSyncer/MessageSyncer:latest
+    image: ghcr.io/messagesyncer/messagesyncer:latest
     restart: unless-stopped
     ports:
       - 11589:11589
