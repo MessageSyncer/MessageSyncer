@@ -3,8 +3,11 @@ services:
     container_name: MessageSyncer
     image: ghcr.io/messagesyncer/messagesyncer:latest
     restart: unless-stopped
+    environment:
+      - TZ=Asia/Shanghai # Change to the time zone you want
     ports:
       - 11589:11589
     volumes:
-      - ../data:/MessageSyncer/data
-      - /etc/localtime:/etc/localtime:ro
+      - ../data/data:/MessageSyncer/data
+      - ../data/getters:/MessageSyncer/src/getters
+      - ../data/pushers:/MessageSyncer/src/pushers
