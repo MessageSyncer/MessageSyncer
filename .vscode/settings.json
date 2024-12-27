@@ -5,4 +5,8 @@
     "git.repositoryScanMaxDepth": 5,
     "python.testing.unittestEnabled": false,
     "python.testing.pytestEnabled": true,
+    "python.analysis.extraPaths": [
+        "./data/dep",
+        "./data/adapter"
+    ],
 }

@@ -1,19 +1,17 @@
 import importlib
 import importlib.util
 import logging
+import os
 import subprocess
 import sys
 from pathlib import Path
 
 import pkg_resources
 
-import util
-
 dep_path = Path("data") / "dep"
 dep_path.mkdir(parents=True, exist_ok=True)
-sys.path.append(dep_path)
+sys.path.append(str(dep_path.absolute()))
 pkg_resources.working_set.add_entry(str(dep_path.absolute()))
-
 
 if hasattr(sys, "_MEIPASS"):
     RUN_IN_FROZEN_MODE = True

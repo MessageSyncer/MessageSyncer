@@ -46,9 +46,7 @@ class AdapterClassNotImported(Exception): ...
 
 def _get_pusher(pusher) -> tuple[Pusher, dict]:
     pusher_class, pusher_id, pusher_to = parse_pusher(pusher)
-    pusher_class = [
-        _c for _c in imported_adapter_classes if _c.__name__ == pusher_class
-    ][0]
+    pusher_class = _get_or_import_class(pusher_class, adapter_classes_path)
     return pusher_class(pusher_id), {"to": pusher_to}
 
 
@@ -164,49 +162,40 @@ def uninstall_adapter(name: str):
     path.unlink(True)
 
 
+def _get_or_import_class(class_name: str, path: Path) -> type:
+    if matched := [
+        cls for cls in imported_adapter_classes if cls.__name__ == class_name
+    ]:
+        return matched[0]
+    else:
+        cls = importing.from_package_import_attr(
+            class_name,
+            path / class_name,
+            class_name,
+        )
+        imported_adapter_classes.add(cls)
+        return cls
+
+
 def _parse_pairs():
     result: dict[Getter, list[str]] = {}
     for pair_str in _get_config().pair:
         try:
-            pair_str: str
             getter_str, pusher_str = pair_str.split(" ", 1)
             getter_class_name, getter_id = parse_getter(getter_str)
             pusher_class_name, _, _ = parse_pusher(pusher_str)
-            if getter_class_matched := [
-                _g
-                for _g in imported_adapter_classes
-                if _g.__name__ == getter_class_name
-            ]:
-                getter_class = getter_class_matched[0]
-            else:
-                getter_class = importing.from_package_import_attr(
-                    getter_class_name,
-                    adapter_classes_path / getter_class_name,
-                    getter_class_name,
-                )
-                imported_adapter_classes.add(getter_class)
-            if pusher_class_matched := [
-                _p
-                for _p in imported_adapter_classes
-                if _p.__name__ == pusher_class_name
-            ]:
-                pusher_class = pusher_class_matched[0]
-            else:
-                pusher_class = importing.from_package_import_attr(
-                    pusher_class_name,
-                    adapter_classes_path / pusher_class_name,
-                    pusher_class_name,
-                )
-                imported_adapter_classes.add(pusher_class)
+
+            getter_class = _get_or_import_class(getter_class_name, adapter_classes_path)
+            pusher_class = _get_or_import_class(pusher_class_name, adapter_classes_path)
         except Exception as e:
             logging.warning(f"Failed to parse {pair_str}: {e}. Skipped")
             continue
 
         if matched := [
-            _getter for _getter in registered_getters if _getter.name == getter_str
+            getter for getter in registered_getters if getter.name == getter_str
         ]:
             getter = matched[0]
-        elif matched := [_getter for _getter in result if _getter.name == getter_str]:
+        elif matched := [getter for getter in result if getter.name == getter_str]:
             getter = matched[0]
         else:
             getter = getter_class(getter_id)
