@@ -343,6 +343,12 @@ async def refresh_worker(getter: Getter) -> RefreshResult:
                     Struct().text(f"{getter} failed to get detail of {id_}: {e}")
                 )
 
+            def get_or_create_article(id_, detail):
+                _article = store.Article.get_or_none(store.Article.id == id_)
+                if not _article:
+                    article = store.Article.from_getresult(id_, detail)
+                    article.save(force_insert=True)
+
             use_merged = _get_config().policy.perf_merged_details
 
             if use_merged:
@@ -351,12 +357,7 @@ async def refresh_worker(getter: Getter) -> RefreshResult:
                         [id_.removeprefix(prefix) for id_ in list_]
                     )
                     detail.user_id = prefix + detail.user_id
-                    [
-                        store.Article.from_getresult(_id, detail).save(
-                            force_insert=True
-                        )
-                        for _id in list_
-                    ]
+                    [get_or_create_article(_id, detail) for _id in list_]
                     await process_result(list_, detail)
                 except NotImplementedError:
                     use_merged = False
@@ -370,9 +371,7 @@ async def refresh_worker(getter: Getter) -> RefreshResult:
                     try:
                         detail = await getter.detail(id_.removeprefix(prefix))
                         detail.user_id = prefix + detail.user_id
-                        store.Article.from_getresult(id_, detail).save(
-                            force_insert=True
-                        )
+                        get_or_create_article(id_, detail)
                         await process_result(id_, detail)
                     except Exception as e:
                         await process_fault(id_, e)
