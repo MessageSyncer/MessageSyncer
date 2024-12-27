@@ -1,10 +1,26 @@
-from peewee import IntegerField, Model, TextField
-from model import *
-from util import *
+import datetime
+import json
+from datetime import datetime
+from typing import Dict, Optional
 
-database_path = Path('../data') / 'database'
+import requests
+from peewee import (
+    AutoField,
+    CharField,
+    DateTimeField,
+    IntegerField,
+    Model,
+    SqliteDatabase,
+    TextField,
+)
+
+from model import *
+
+database_path = Path("data") / "database"
 database_path.mkdir(parents=True, exist_ok=True)
-main_db = SqliteDatabase(database_path / 'main.db')
+storage_path = Path("data") / "storage"
+storage_path.mkdir(parents=True, exist_ok=True)
+main_db = SqliteDatabase(database_path / "main.db")
 
 
 class StructField(TextField):
@@ -24,9 +40,11 @@ class Article(Model):
     class Meta:
         database = main_db
 
-    def from_getresult(id: str, getresult: GetResult):
-        return Article(id=id, userId=getresult.user_id, ts=getresult.ts, content=getresult.content)
+    @classmethod
+    def from_getresult(cls, id: str, getresult: GetResult) -> "Article":
+        return cls(
+            id=id, userId=getresult.user_id, ts=getresult.ts, content=getresult.content
+        )
 
 
 Article.create_table()
-pass

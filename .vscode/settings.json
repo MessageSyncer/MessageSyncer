@@ -1,8 +1,8 @@
 {
     "git.scanRepositories": [
-        "src/pushers",
-        "src/getters",
-        "data"
+        "data/adapter"
     ],
-    "git.repositoryScanMaxDepth": -1
+    "git.repositoryScanMaxDepth": 5,
+    "python.testing.unittestEnabled": false,
+    "python.testing.pytestEnabled": true,
 }

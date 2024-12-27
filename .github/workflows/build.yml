@@ -1,0 +1,50 @@
+name: Build Executable File
+
+on:
+  push:
+    tags: ["v*.*.*"]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-22.04, windows-2022]
+        # arch: [x86_64, arm64]
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11.9"
+          cache: 'pip'
+
+      - name: Setup (Windows)
+        if: runner.os == 'Windows'
+        run: |
+          pwsh ./tool/setup.ps1 -NoDev
+
+      - name: Setup (Ubuntu)
+        if: runner.os == 'Linux'
+        run: |
+          bash ./tool/setup.sh --no-dev
+
+      - name: Build (Windows)
+        if: runner.os == 'Windows'
+        run: |
+          pwsh ./tool/build.ps1 -FileName "MessageSyncer-${{ runner.os }}.exe"
+
+      - name: Build (Ubuntu)
+        if: runner.os == 'Linux'
+        run: |
+          bash ./tool/build.sh --filename "MessageSyncer-${{ runner.os }}"
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            dist/*

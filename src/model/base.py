@@ -1,23 +1,26 @@
-from abc import abstractmethod, ABC
-from dataclasses import dataclass, asdict, field
-from typing import TypeVar, Generic
-from config import get_config_manager
+import logging
 import typing
-from util import *
+from abc import ABC, abstractmethod
+from dataclasses import asdict, dataclass, field
+from pathlib import Path
+from typing import Generic, TypeVar
+
+from config import get_config_manager
+
 from .struct import Struct
 
-TADAPTERCONFIG = TypeVar('TADAPTERCONFIG', bound='AdapterConfig')
-TADAPTERINSTANCECONFIG = TypeVar('TADAPTERINSTANCECONFIG', bound='AdapterInstanceConfig')
+TADAPTERCONFIG = TypeVar("TADAPTERCONFIG", bound="AdapterConfig")
+TADAPTERINSTANCECONFIG = TypeVar(
+    "TADAPTERINSTANCECONFIG", bound="AdapterInstanceConfig"
+)
 
 
 @dataclass
-class AdapterConfig():
-    pass
+class AdapterConfig: ...
 
 
 @dataclass
-class AdapterInstanceConfig():
-    pass
+class AdapterInstanceConfig: ...
 
 
 class Adapter(ABC, Generic[TADAPTERCONFIG, TADAPTERINSTANCECONFIG]):
@@ -33,35 +36,47 @@ class Adapter(ABC, Generic[TADAPTERCONFIG, TADAPTERINSTANCECONFIG]):
         self.class_name = self.__class__.__name__
         self.name = self.class_name
 
-        if id != None:
-            self.name += f'.{id}'
+        if id is not None:
+            self.name += f".{id}"
+
+        self.class_storage_path = Path() / "data" / "storage" / self.class_name
+        self.storage_path = Path() / "data" / "storage" / self.name
+        self.class_storage_path.mkdir(parents=True, exist_ok=True)
+        self.storage_path.mkdir(parents=True, exist_ok=True)
 
         _generic_params = self._get_generic_params()
 
-        def _process_type(_i, _T):
-            _t = _generic_params[_i]
-            if _t == _T:
-                _t = dict
-            return _t
+        def _process_type(index, T, default):
+            type_ = _generic_params[index]
+            if type_ == T:
+                type_ = default
+            return type_
 
-        self._config = get_config_manager(_process_type(0, TADAPTERCONFIG), self.class_name)
-        if self.id != None:
-            self._instance_config = get_config_manager(_process_type(1, TADAPTERINSTANCECONFIG), self.name)
+        self.config_manager = get_config_manager(
+            _process_type(0, TADAPTERCONFIG, self._default_config_type), self.class_name
+        )
+        if self.id is not None:
+            self.instance_config_manager = get_config_manager(
+                _process_type(
+                    1, TADAPTERINSTANCECONFIG, self._default_instanceconfig_type
+                ),
+                self.name,
+            )
         else:
-            self._instance_config = None
+            self.instance_config_manager = None
 
         self.logger = logging.getLogger(self.name)
 
     @property
     def config(self) -> TADAPTERCONFIG:
-        return self._config.value
+        return self.config_manager.value
 
     @property
     def instance_config(self) -> TADAPTERINSTANCECONFIG:
-        if self._instance_config != None:
-            return self._instance_config.value
+        if self.instance_config_manager is not None:
+            return self.instance_config_manager.value
         else:
-            return {}
+            return None
 
     def __str__(self) -> str:
         return self.name

@@ -1,0 +1,16 @@
+[tool.isort]
+extend_skip = ["tool", "data"]
+profile = "black"
+
+[tool.black]
+extend-exclude = '''
+    (/data|/tool)
+'''
+
+[tool.pip-tools]
+no-emit-index-url = true
+
+[tool.pytest.ini_options]
+addopts = "--rootdir=."
+pythonpath = ["src"]
+testpaths = ["test", "data/adapter"]

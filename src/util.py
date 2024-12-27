@@ -1,137 +1,82 @@
-import git
-import base64
-import shutil
-import json
-import yaml
-import requests
-import logging
-import colorlog
-import subprocess
-import re
 import asyncio
-from PIL import Image
+import dataclasses
+import logging
+import re
+import shutil
+import subprocess
 from pathlib import Path
-from peewee import SqliteDatabase
-from urllib.parse import urlparse
+from typing import Any, Dict, List, Type, Union
+
+import git
+import requests
 
 
-def generate_function_call(function, *args, **kwargs):
+def generate_function_call_str(function, *args, **kwargs):
     args_str = ", ".join(repr(arg) for arg in args)
     kwargs_str = ", ".join(f"{key}={repr(value)}" for key, value in kwargs.items())
     all_args_str = ", ".join(filter(None, [args_str, kwargs_str]))
     return f"{function}({all_args_str})"
 
 
-def clone_from_vcs(string: str, path: Path):
-    logging.info(f"Cloning {string}...")
-
-    parts = string.split('+', 1)
-    if len(parts) == 2:
-        vcs = parts[0]
-        url = parts[1]
-    elif len(parts) == 1:
-        vcs = 'git'
-        url = parts[0]
-    else:
-        raise ValueError("Invalid vcs source format")
-
-    target_path = path
-    if target_path.exists():
-        if target_path.is_dir():
-            shutil.rmtree(target_path)
-
-    if vcs == 'git':
-        command = ['git', 'clone', url, str(target_path)]
-    elif vcs == 'svn':
-        command = ['svn', 'checkout', url, str(target_path)]
-    elif vcs == 'hg':
-        command = ['hg', 'clone', url, str(target_path)]
-    elif vcs == 'bzr':
-        command = ['bzr', 'branch', url, str(target_path)]
-    else:
-        raise ValueError(f"Unsupported VCS: {vcs}")
-
-    try:
-        subprocess.run(command, check=True)
-        logging.info(f"Cloned {vcs} repository from {url} to {target_path}")
-    except subprocess.CalledProcessError as e:
-        raise Exception(f"Error cloning repository: {e}")
-
-
-def download(url, path):
-    path = str(path)
-    logging.debug(f'Start to download from {url} to {path}')
-    response = requests.get(url)
+def download(url, path: Path):
+    logging.debug(f"Start to download from {url} to {path}")
+    response = requests.get(url, proxies={})
     if response.status_code == 200:
-        with open(path, 'wb') as file:
-            file.write(response.content)
-        return path
+        path.write_bytes(response.content)
     else:
-        raise Exception(f'Download failed: {response.status_code}')
+        raise Exception(f"Download failed: {response.status_code}")
 
 
-async def async_download(url, path):
-    path = str(path)
-    logging.debug(f'Start to download from {url} to {path}')
-    response = await asyncio.threads.to_thread(requests.get, url, proxies={})
-    if response.status_code == 200:
-        with open(path, 'wb') as file:
-            file.write(response.content)
-        return path
-    else:
-        raise Exception(f'Download failed: {response.status_code}')
+async def download_async(url, path: Path):
+    await asyncio.threads.to_thread(download, url, path)
 
 
 def is_valid_url(url):
-    if url == None:
+    if url is None:
         return False
     pattern = re.compile(
-        r'^(https?|ftp)://'  # http, https
-        r'(?:(?:[A-Z0-9](?:[A-Z0-9-]{0,61}[A-Z0-9])?\.)+(?:[A-Z]{2,6}\.?|[A-Z0-9-]{2,}\.?)|'  # 域名
-        r'localhost|'  # local host
-        r'\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}|'  # IPv4 address
-        r'\[?[A-F0-9]*:[A-F0-9:]+\]?)'  # IPv6 address
-        r'(?::\d+)?'  # Port number (optional)
-        r'(?:/?|[/?]\S+)$', re.IGNORECASE)  # Slashes and other characters
+        r"^(https?|ftp)://"  # http, https
+        r"(?:(?:[A-Z0-9](?:[A-Z0-9-]{0,61}[A-Z0-9])?\.)+(?:[A-Z]{2,6}\.?|[A-Z0-9-]{2,}\.?)|"  # 域名
+        r"localhost|"  # local host
+        r"\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}|"  # IPv4 address
+        r"\[?[A-F0-9]*:[A-F0-9:]+\]?)"  # IPv6 address
+        r"(?::\d+)?"  # Port number (optional)
+        r"(?:/?|[/?]\S+)$",
+        re.IGNORECASE,
+    )  # Slashes and other characters
 
     # Use regular expressions to match the given URL
     return re.match(pattern, url) is not None
 
 
-def read_file(path):
-    with open(str(path), 'r', encoding='utf8') as file:
-        return file.read()
-
-
-def read_json(path):
-    return json.loads(read_file(path))
-
-
-def read_yaml(path):
-    return yaml.safe_load(read_file(path))
-
-
-def write_file(path, content):
-    with open(str(path), 'w', encoding='utf8') as file:
-        file.write(content)
-
-
-def write_json(path, content):
-    write_file(path, json.dumps(content, ensure_ascii=False))
-
-
-def write_yaml(path, content):
-    write_file(path, yaml.safe_dump(content))
-
-
-def get_key_by_value(dictionary, value):
-    for k, v in dictionary.items():
-        if v == value:
-            return k
-
-
 def byte_to_MB(byte):
     return byte / (1024**2)
+
+
+def get_git_version(repo_path) -> str:
+    """
+    Get the version of the current commit. If there's a tag exactly matching
+    the current commit, return the tag name. Otherwise, return the short commit hash.
+
+    :param repo_path: Path to the Git repository. Defaults to the current directory.
+    :return: Tag name or short commit hash as the version.
+    """
+    try:
+        # Initialize the Git repository object
+        repo = git.Repo(repo_path)
+
+        # Get the current commit
+        current_commit = repo.head.commit
+
+        # Check for exact matching tag
+        tags = [tag.name for tag in repo.tags if tag.commit == current_commit]
+        if tags:
+            return tags[0]  # Return the first matching tag name
+
+        # Fallback to short commit hash if no matching tag is found
+        return current_commit.hexsha[:7]  # Short commit hash (first 7 characters)
+    except Exception as e:
+        return ""
 
 
 def get_current_commit(repo_path: Path) -> str:
@@ -142,7 +87,63 @@ def get_current_commit(repo_path: Path) -> str:
     """
     try:
         repo = git.Repo(str(repo_path))
-        current_commit = repo.head.commit.hexsha
-        return current_commit
+        return repo.head.commit.hexsha
     except:
-        return ''
+        return ""
+
+
+def dataclass_to_jsonschema(cls: Type) -> Dict[str, Any]:
+    if not dataclasses.is_dataclass(cls):
+        raise ValueError("Provided class is not a dataclass")
+
+    schema = {"type": "object", "properties": {}, "required": []}
+
+    for field in dataclasses.fields(cls):
+        field_schema = {"type": get_json_type(field.type)}
+        schema["properties"][field.name] = field_schema
+        if field.default is None and field.default_factory is dataclasses.MISSING:
+            schema["required"].append(field.name)
+
+    return schema
+
+
+def get_json_type(field_type: Any) -> str:
+    """Map Python types to JSON Schema types."""
+    if field_type in {str, int, float, bool}:
+        return field_type.__name__
+    elif field_type == list or field_type == List:
+        return "array"
+    elif field_type == dict or field_type == Dict:
+        return "object"
+    elif dataclasses.is_dataclass(field_type):
+        # Nested dataclass
+        return dataclass_to_jsonschema(field_type)
+    return "string"  # Default to string for unsupported types
+
+
+def get_nested_value(d: dict, path):
+    keys = path.split(".")
+    for key in keys:
+        d = d[key]
+    return d
+
+
+def remove_nested_key(d: dict, path):
+    keys = path.split(".")
+    for i, key in enumerate(keys):
+        if i == len(keys) - 1:
+            try:
+                del d[key]
+            except:
+                pass
+        else:
+            d = d.setdefault(key, {})
+
+
+def set_nested_value(d: dict, path, value):
+    keys = path.split(".")
+    for i, key in enumerate(keys):
+        if i == len(keys) - 1:
+            d[key] = value
+        else:
+            d = d.setdefault(key, {})

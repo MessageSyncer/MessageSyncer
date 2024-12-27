@@ -1,37 +1,46 @@
-import util
-import requests
-import config
 import logging
+import time
 from datetime import datetime
 from unittest.mock import patch
 
+import requests
+
+import config
+import const
+import util
+
 
 def _process_proxy(dict_: dict):
-    dict_.setdefault('proxies', config.main().proxies)
+    dict_.setdefault("proxies", config.main().network.proxies)
     return dict_
 
 
-proxy_logger = logging.getLogger('requests_proxy')
 original_request_method = requests.Session.request
 
 
 def requests_proxy(*args, **kwargs):
     kwargs = _process_proxy(kwargs)
-    logger = proxy_logger.getChild(util.generate_function_call('requests.Session.request', *args, **kwargs))
-    max_retry_time = 2
+    logger = logging.getLogger("requests_proxy")
+    total_str = util.generate_function_call_str(
+        "requests.Session.request", *args, **kwargs
+    )
+    request_str = hash(total_str)
+    max_retry_time = const.PROXY_REQUEST_MAXRETRYTIME
     for i in range(max_retry_time):
+        logger.debug(f"{request_str}: start: {total_str}")
         try:
-            start_time = datetime.now()
-            logger.debug(f'Trying to request ({i+1}/{max_retry_time})')
+            retrystr = f"({i+1}/{max_retry_time})"
+            logger.debug(f"{request_str}: try{retrystr}")
+            start_time = time.time()
             result = original_request_method(*args, **kwargs)
-            end_time = datetime.now()
-            logger.debug(f'Request finished, cost: {(end_time-start_time).total_seconds()} s')
+            end_time = time.time()
+            logger.debug(f"{request_str}: finished after {end_time-start_time} seconds")
             return result
         except Exception as e:
-            logger.warning(e)
-            if i+1 >= max_retry_time:
+            logger.warning(f"{request_str}: failed{retrystr}: {e}")
+            if i + 1 >= max_retry_time:
                 raise e
 
 
 def force_proxies_patch():
-    return patch('requests.Session.request', new=requests_proxy)
+    return patch("requests.Session.request", new=requests_proxy)

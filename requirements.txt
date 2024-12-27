@@ -1,0 +1,15 @@
+aiocron
+peewee
+pillow
+pyyaml
+requests
+fastapi
+uvicorn
+colorlog
+gitpython
+
+pre-commit
+black
+flake8
+isort
+pytest

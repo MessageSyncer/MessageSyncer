@@ -1,8 +1,62 @@
-from .struct import Struct, StructElement, StructImage, StructText
+import logging
+import shutil
+from dataclasses import asdict, dataclass, field
+from pathlib import Path
+from typing import List
+
+import importing
+
 from .base import Adapter
 from .getter_base import GetResult, Getter, GetterConfig, GetterInstanceConfig
 from .pusher_base import Pusher, PusherConfig, PusherInstanceConfig
-import logging
-from typing import List
-from dataclasses import dataclass, field, asdict
-from pathlib import Path
+from .struct import Struct, StructElement, StructImage, StructText
+
+adapter_classes_path = Path() / "data" / "adapter"
+adapter_classes_path.mkdir(parents=True, exist_ok=True)
+
+
+def _migrate():
+    # TOV2
+    old_paths = [Path() / "src" / "getters", Path() / "src" / "pushers"]
+    logger = logging.getLogger("base._migrate")
+
+    for old_path in old_paths:
+        if old_path.exists():
+            logging.info("Old adapters path detected")
+            for item in old_path.iterdir():
+                try:
+                    shutil.move(str(item), str(adapter_classes_path))
+                    logging.info(
+                        f"Successfully moved {item} to new adapter_classes_path"
+                    )
+                except Exception as e:
+                    logger.warning(
+                        f"Failed to move {item} to {adapter_classes_path}: {e}"
+                    )
+            try:
+                old_path.rmdir()
+            except Exception as e:
+                logger.warning(f"Failed to rmdir {old_path}: {e}")
+
+
+_migrate()
+
+
+def parse_getter(getter):
+    getter = getter.split(".")
+    getter.append(None)
+    getter_class = getter[0]
+    getter_id = getter[1]
+    return getter_class, getter_id
+
+
+def parse_pusher(pusher):
+    _pusher = pusher.split(".", 2)
+    pusher = _pusher[0]
+    pusher_id = _pusher[1]
+    if pusher_id == "":
+        pusher_id = None
+    pusher_to = _pusher[2]
+    if pusher_to == "":
+        pusher_to = None
+    return pusher, pusher_id, pusher_to
