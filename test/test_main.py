@@ -76,7 +76,7 @@ async def _refresh():
         store.Article.id == f"TestCaseGetter_{str(cur_time)}"
     )
     assert article
-    assert str(article.content) == str(test_content_start)
+    assert article.content.asdict() == test_content_start.asdict()
 
 
 def test_refresh():
