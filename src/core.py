@@ -188,7 +188,7 @@ def _parse_pairs():
             getter_class = _get_or_import_class(getter_class_name, adapter_classes_path)
             pusher_class = _get_or_import_class(pusher_class_name, adapter_classes_path)
         except Exception as e:
-            logging.warning(f"Failed to parse {pair_str}: {e}. Skipped")
+            logging.warning(f"Failed to parse {pair_str}: {e}. Skipped", exc_info=True)
             continue
 
         if matched := [

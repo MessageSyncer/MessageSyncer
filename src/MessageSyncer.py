@@ -1,11 +1,14 @@
 import asyncio
 import datetime
 import logging
+import os
+import sys
 
 import api
 import config
 import core
 import log
+import runtime
 from model import *
 
 
@@ -18,8 +21,12 @@ async def main():
 
 if __name__ == "__main__":
     log.init()
-    logging.info(f"MessageSyncer ({config.messagesyncer_detail().version}) started")
+    logging.info(f"MessageSyncer ({runtime.version}) started")
     logging.info(f"at {Path().absolute()}")
+    if runtime.run_in_frozen_mode:
+        logging.debug(
+            f"frozen at {sys._MEIPASS}, build time: {datetime.datetime.fromtimestamp(runtime.build_time)}"
+        )
     try:
         asyncio.run(main())
     except KeyboardInterrupt:

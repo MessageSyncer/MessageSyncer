@@ -14,7 +14,7 @@ if (-not $version) {
     $version = git rev-parse --short HEAD
 }
 
-$pipMEIPASSPath = 'pip'
+$pipMEIPASSPath = '_pip_meipath'
 $timestamp = [int][double]::Parse((Get-Date -UFormat %s))
 
 # Update the runtimeinfo.py file with the version information
@@ -28,9 +28,4 @@ Set-Content -Path ".\src\runtimeinfo.py" -Value $content
 # Compile the script into a single executable using pyinstaller
 & .\.venv\Scripts\Activate.ps1
 pip install pyinstaller
-pyinstaller --onefile --name "$filename" .\src\MessageSyncer.py --add-data ".venv/Scripts/pip.exe:$pipMEIPASSPath"
-
-# Generate checksum
-$FileHash = Get-FileHash -Path "dist\$FileName" -Algorithm SHA256
-$outputPath = "dist\$((Get-Item "dist\$FileName").Name).sha256"
-$FileHash.Hash | Out-File -FilePath $outputPath
+python tool\build.py $FileName "--add-data=.venv/Scripts/pip.exe:${pipMEIPASSPath}"

@@ -129,12 +129,6 @@ def get_config_manager(
 
 
 @dataclass
-class MessageSyncerDetail:
-    version: str = ""
-    buildtime: int = 0
-
-
-@dataclass
 class MainConfig:
     @dataclass
     class LoggingConfig:
@@ -212,20 +206,3 @@ main_manager = get_config_manager(MainConfig, "main")
 
 def main():
     return main_manager.value
-
-
-def messagesyncer_detail() -> MessageSyncerDetail:
-    try:
-        import runtimeinfo
-
-        ver = runtimeinfo.VERSION
-    except:
-        ver = ""
-
-    try:
-        import runtimeinfo
-
-        buildtime = runtimeinfo.BUILDTIME
-    except:
-        buildtime = int(time.time())
-    return MessageSyncerDetail(ver, buildtime)

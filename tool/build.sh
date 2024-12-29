@@ -18,7 +18,7 @@ if [ -z "$version" ]; then
     version=$(git rev-parse --short HEAD)
 fi
 
-pip_MEIPASS_Path='pip'
+pip_MEIPASS_Path='_pip_meipath'
 timestamp=$(date +%s)
 
 # Update the runtimeinfo.py file with the version information
@@ -30,7 +30,4 @@ BUILDTIME = $timestamp
 # Compile the script into a single executable using pyinstaller
 source .venv/bin/activate
 pip install pyinstaller
-pyinstaller --onefile --name "$filename" ./src/MessageSyncer.py --add-data ".venv/bin/pip:$pip_MEIPASS_Path"
-
-# Generate checksum
-sha256sum "dist/$filename" > "dist/$(basename "$filename").sha256"
+python tool/build.py $filename "--add-data=.venv/bin/pip:$pip_MEIPASS_Path"

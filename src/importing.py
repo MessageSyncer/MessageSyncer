@@ -8,18 +8,13 @@ from pathlib import Path
 
 import pkg_resources
 
+import image
+import runtime
+
 dep_path = Path("data") / "dep"
 dep_path.mkdir(parents=True, exist_ok=True)
 sys.path.append(str(dep_path.absolute()))
 pkg_resources.working_set.add_entry(str(dep_path.absolute()))
-
-if hasattr(sys, "_MEIPASS"):
-    RUN_IN_FROZEN_MODE = True
-    import runtimeinfo
-
-    sys.path.insert(0, str(Path(sys._MEIPASS) / runtimeinfo.PIPMEIPASSPATH))
-else:
-    RUN_IN_FROZEN_MODE = False
 
 
 def try_install_requirementstxt(requirements_file: Path):
@@ -31,9 +26,11 @@ def try_install_requirementstxt(requirements_file: Path):
         requirement_str = requirement_str.strip()
 
         try:
-            pkg_resources.require(requirement_str)
+            version = importlib.metadata.version(requirement_str)
             installed = True
-        except (pkg_resources.DistributionNotFound, pkg_resources.VersionConflict):
+            logging.debug(f"Check requirement: {requirement_str}: exists, {version}")
+        except Exception as e:
+            logging.debug(f"Check requirement: {requirement_str}: {e}")
             installed = False
 
         if not installed:
@@ -41,7 +38,7 @@ def try_install_requirementstxt(requirements_file: Path):
                 logging.debug(f"Trying to install {requirement_str}")
                 subprocess.check_call(
                     [
-                        "pip",
+                        runtime.pip,
                         "install",
                         requirement_str,
                         "--target",
@@ -49,7 +46,7 @@ def try_install_requirementstxt(requirements_file: Path):
                     ]
                 )
                 logging.debug(f"Successfully installed {requirement_str}")
-            except subprocess.CalledProcessError as e:
+            except Exception as e:
                 logging.warning(f"Failed to install {requirement_str}: {e}")
 
 

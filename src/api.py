@@ -22,6 +22,7 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 import config
 import core
 import log
+import runtime
 import store
 import task
 import util
@@ -118,7 +119,7 @@ async def hello_world() -> dict:
     return {
         "version": {
             "api": VERSION,
-            "MessageSyncer": config.messagesyncer_detail().version,
+            "MessageSyncer": runtime.version,
         }
     }
 
