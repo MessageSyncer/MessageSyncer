@@ -141,6 +141,7 @@ venv.bak/
 .env.win
 .venv.linux
 .venv.win
+.secrets
 
 # Spyder project settings
 .spyderproject

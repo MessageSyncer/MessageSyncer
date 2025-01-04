@@ -7,11 +7,7 @@ build_time: int
 pip: str
 
 
-def is_frozen():
-    return getattr(sys, "frozen", False) and hasattr(sys, "_MEIPASS")
-
-
-run_in_frozen_mode = is_frozen()
+run_in_frozen_mode = getattr(sys, "frozen", False) and hasattr(sys, "_MEIPASS")
 if run_in_frozen_mode:
     import runtimeinfo
 

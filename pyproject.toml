@@ -1,10 +1,10 @@
 [tool.isort]
-extend_skip = ["tool", "data"]
+extend_skip = ["data"]
 profile = "black"
 
 [tool.black]
 extend-exclude = '''
-    (/data|/tool)
+    (/data|/.venv)
 '''
 
 [tool.pip-tools]

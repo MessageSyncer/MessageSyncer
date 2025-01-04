@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  build:
+  build_executable:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -42,12 +42,14 @@ jobs:
       - name: Build (Windows)
         if: runner.os == 'Windows'
         run: |
-          pwsh ./tool/build.ps1 -FileName "${{ env.filename }}"
+          .\.venv\Scripts\activate
+          python tool/build.py "${{ env.filename }}"
 
       - name: Build (Ubuntu)
         if: runner.os == 'Linux'
         run: |
-          bash ./tool/build.sh --filename "${{ env.filename }}"
+          source ./.venv/bin/activate
+          python tool/build.py "${{ env.filename }}"
 
       - name: Create Release
         uses: softprops/action-gh-release@v2
