@@ -19,23 +19,23 @@ test_content_end = None
 last_list = [str(cur_time)]
 test_config = config.MainConfig()
 
-test_config.pair = ["TestCaseGetter.1 TestCasePusher.."]
+test_config.pair = ["CaseGetter.1 CasePusher.."]
 test_config.policy.refresh_when_start = False
 test_config.policy.skip_first = False
 
 
 @dataclass
-class TestCaseGetterConfig(GetterConfig):
+class CaseGetterConfig(GetterConfig):
     trigger: list[str] = field(default_factory=lambda: [])
     getter_config_key: str = "getter_config_value"
 
 
 @dataclass
-class TestCaseGetterInstanceConfig(GetterInstanceConfig):
+class CaseGetterInstanceConfig(GetterInstanceConfig):
     getter_config_instance_key: str = "getter_config_instance_value"
 
 
-class TestCaseGetter(Getter[TestCaseGetterConfig, TestCaseGetterInstanceConfig]):
+class CaseGetter(Getter[CaseGetterConfig, CaseGetterInstanceConfig]):
     def __init__(self, id=None) -> None:
         super().__init__(id)
         self.logger.info(f"{self.name} inited")
@@ -53,7 +53,7 @@ class TestCaseGetter(Getter[TestCaseGetterConfig, TestCaseGetterInstanceConfig])
         )
 
 
-class TestCasePusher(Pusher):
+class CasePusher(Pusher):
     def __init__(self, id=None) -> None:
         super().__init__(id)
 
@@ -63,8 +63,8 @@ class TestCasePusher(Pusher):
 
 
 async def _refresh():
-    core.imported_adapter_classes.add(TestCaseGetter)
-    core.imported_adapter_classes.add(TestCasePusher)
+    core.imported_adapter_classes.add(CaseGetter)
+    core.imported_adapter_classes.add(CasePusher)
 
     core.init(lambda: test_config)
     core.update_getters()
@@ -73,7 +73,7 @@ async def _refresh():
     assert str(test_content_end) == str(test_content_start)
 
     article = store.Article.get_or_none(
-        store.Article.id == f"TestCaseGetter_{str(cur_time)}"
+        store.Article.id == f"CaseGetter_{str(cur_time)}"
     )
     assert article
     assert article.content.asdict() == test_content_start.asdict()
