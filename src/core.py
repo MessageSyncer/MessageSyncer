@@ -126,11 +126,8 @@ def stop_corn(getter: Getter, trigger: str):
     getter.logger.debug(f"Trigger stopped: {trigger}")
 
 
-def reload_adapter_class(name: str):
-    try:
-        curclass = [_c for _c in imported_adapter_classes if _c.__name__ == name][0]
-    except IndexError:
-        raise AdapterClassNotImported()
+def reload_adapter_class(curclass: type):
+    name = curclass.__name__
     imported_adapter_classes.remove(curclass)
     newclass = importing.from_package_import_attr(
         name, adapter_classes_path / name, name, force_reload=True
