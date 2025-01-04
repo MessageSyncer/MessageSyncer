@@ -53,11 +53,11 @@ class Getter(
         ...
 
     @abstractmethod
-    async def detail(self, id: str) -> GetResult:
+    async def detail(self, id_: str) -> GetResult:
         """Get detail of a specific id. Must be overrided.
 
         Args:
-            id (str): id
+            id_ (str): id
 
         Returns:
             GetResult: Result
