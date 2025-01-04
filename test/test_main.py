@@ -66,11 +66,11 @@ async def _refresh():
     core.imported_adapter_classes.add(CaseGetter)
     core.imported_adapter_classes.add(CasePusher)
 
-    core.init(lambda: test_config)
+    core.init(get_config_function=lambda: test_config)
     core.update_getters()
 
     await core.refresh_worker(core.registered_getters[0])
-    assert str(test_content_end) == str(test_content_start)
+    assert test_content_end.asdict() == test_content_start.asdict()
 
     article = store.Article.get_or_none(
         store.Article.id == f"CaseGetter_{str(cur_time)}"
