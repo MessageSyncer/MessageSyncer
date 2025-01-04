@@ -24,7 +24,7 @@ jobs:
           cache: "pip"
 
       - if: runner.os == 'Windows'
-        run: echo "filename=MessageSyncer-Windows.exe" >> $GITHUB_ENV
+        run: echo "filename=MessageSyncer-Windows.exe" >> $env:GITHUB_ENV
       
       - if: runner.os == 'Linux'
         run: echo "filename=MessageSyncer-Linux" >> $GITHUB_ENV
