@@ -1,6 +1,7 @@
 import hashlib
 import os
 import pkgutil
+import platform
 import re
 import subprocess
 import sys
@@ -82,21 +83,22 @@ BUILDTIME = {timestamp}
 
 
 def main():
+    pip_meipass_path = "_pip_meipath"
+    timestamp = int(datetime.now().timestamp())
+
+    system_name = platform.system()
+    if system_name == "Windows":
+        filename = "MessageSyncer.exe"
+        extra_args = [f"--add-data=.venv/Scripts/pip.exe:{pip_meipass_path}"]
+    elif system_name == "Linux":
+        filename = "MessageSyncer"
+        extra_args = [f"--add-data=.venv/bin/pip:{pip_meipass_path}"]
+    else:
+        raise NotImplementedError(f"Unsupported platform: {system_name}")
+
     # Parse arguments
     if len(sys.argv) >= 2:
         filename = sys.argv[1]
-    else:
-        if os.name == "nt":
-            filename = "MessageSyncer.exe"
-        else:
-            filename = "MessageSyncer"
-
-    pip_meipass_path = "_pip_meipath"
-    timestamp = int(datetime.now().timestamp())
-    if os.name == "nt":
-        extra_args = [f"--add-data=.venv/Scripts/pip.exe:{pip_meipass_path}"]
-    else:
-        extra_args = [f"--add-data=.venv/bin/pip:{pip_meipass_path}"]
 
     # Get version from Git
     version = get_version()
