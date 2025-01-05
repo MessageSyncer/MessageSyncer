@@ -1,7 +1,6 @@
 .venv
 .vscode
 data
-src/getters/*
-!src/getters/__init__.py
-src/pushers/*
-!src/pushers/__init__.py
+build
+dist
+*.spec

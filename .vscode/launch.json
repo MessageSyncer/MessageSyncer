@@ -1,21 +1,20 @@
 {
     "version": "0.2.0",
     "configurations": [
-    
         {
             "name": "Start",
             "type": "debugpy",
             "request": "launch",
-            "program": "${workspaceFolder}/src/MessageSyncer.py",
-            "cwd": "${workspaceFolder}/src",
+            "program": "./src/MessageSyncer.py",
+            "cwd": "${workspaceFolder}",
             "console": "integratedTerminal"
         },
         {
             "name": "Test",
             "type": "debugpy",
             "request": "launch",
-            "program": "${workspaceFolder}/src/test.py",
-            "cwd": "${workspaceFolder}/src",
+            "program": "./src/test.py",
+            "cwd": "${workspaceFolder}",
             "console": "integratedTerminal"
         }
     ]

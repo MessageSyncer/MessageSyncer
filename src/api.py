@@ -1,34 +1,43 @@
 import asyncio
 import logging
-import uvicorn
-import log
-import config
-import refresh
-import pushers
 import time
-import store
-import importing
+from typing import Annotated, Any, Optional, Union
 
-from util import *
-from model import *
-from typing import Annotated, Optional, Any, Union
-from pydantic import BaseModel
-from fastapi import FastAPI, HTTPException, Depends, APIRouter, Response, Path, Header, Request
+import uvicorn
+from fastapi import (
+    APIRouter,
+    Depends,
+    FastAPI,
+    Header,
+    HTTPException,
+    Path,
+    Request,
+    Response,
+    status,
+)
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, RedirectResponse
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from fastapi.middleware.cors import CORSMiddleware
 
+import config
+import core
+import log
+import runtime
+import store
+import task
+import util
+from model import *
 
-HOST = '0.0.0.0'
+HOST = "0.0.0.0"
 PORT = config.main().api.port
 
 # Update this field every time when a destructive update is made.
 # If a destructive update is made, use this field to control the response model of API.
-# [20240702]
-VERSION = 20240702
+# [20241222]
+VERSION = 20241222
 
-app = FastAPI(title='MessageSyncerAPI', version=str(VERSION))
-router = APIRouter(prefix='/api')
+app = FastAPI(title="MessageSyncerAPI", version=str(VERSION))
+router = APIRouter(prefix="/api")
 
 app.add_middleware(
     CORSMiddleware,
@@ -41,7 +50,7 @@ app.add_middleware(
 
 @app.exception_handler(Exception)
 async def generic_exception_handler(request: Request, exc: Exception):
-    return JSONResponse(status_code=500, content='Internal server error')
+    return JSONResponse(status_code=500, content={"msg": "Internal server error"})
 
 
 @app.exception_handler(HTTPException)
@@ -50,195 +59,304 @@ async def generic_exception_handler(request: Request, exc: HTTPException):
 
 
 def authenticate(credentials: HTTPAuthorizationCredentials = Depends(HTTPBearer())):
-    if not credentials.credentials in config.main().api.token:
-        raise HTTPException(403)
+    if credentials.credentials not in config.main().api.token:
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED)
     return True
 
 
-def get_getter(getter_str: str) -> Getter:
-    ls = [_getter for _getter in refresh.registered_getters if _getter.name == getter_str]
-    if len(ls) != 0:
-        return ls[0]
-    raise HTTPException(404)
+@dataclass
+class AdapterClassInfo:
+    name: str
+    version: str
 
-
-def get_pusher(pusher_str: str) -> Pusher:
-    ls = [_pusher for _pusher in pushers.pushers_inited if _pusher.name == pusher_str]
-    if len(ls) != 0:
-        return ls
-    raise HTTPException(404)
+    @staticmethod
+    def from_class(adapter: type):
+        return AdapterClassInfo(
+            name=adapter.__name__,
+            version=util.get_git_version(adapter._import_path),
+        )
 
 
 @dataclass
-class GetterInfo():
+class GetterInfo:
     name: str
     class_name: str
-
     working: bool
-
     config: dict
     instance_config: dict
 
-    version_commit: Optional[str] = None  # If exists
-
     @staticmethod
     def from_getter(getter: Getter):
-        getter_path = importing.details[getter.class_name].path
-        version_commit = None
-        if not getter_path.is_file():
-            try:
-                version_commit = get_current_commit(getter_path)
-            except:
-                pass
         return GetterInfo(
             name=getter.name,
             class_name=getter.class_name,
             working=getter._working,
             config=getter.config,
             instance_config=getter.instance_config,
-            version_commit=version_commit)
+        )
 
 
 @dataclass
-class Article():
+class Article:
     id: str
     userId: str
     ts: int
     content: list[dict]
 
 
-# Task control
-tasks = {}
-
-
-def start_task(coroutine):
-    task = asyncio.create_task(coroutine)
-    taskid = str(hash(task))
-    tasks[taskid] = task
-    return JSONResponse(taskid, 202)
+@dataclass
+class AdapterInstallRequestBody:
+    url: str
 
 
 @app.get("/", include_in_schema=False)
 async def _():
-    return RedirectResponse('./docs')
+    return RedirectResponse("./docs")
 
 
 @router.get("/")
 async def hello_world() -> dict:
-    return JSONResponse({
-        "version": VERSION,
-        "MessageSyncer_version_commit": config.messagesyncer_detail().version_commit
-    })
+    return {
+        "version": {
+            "api": VERSION,
+            "MessageSyncer": runtime.version,
+        }
+    }
 
 
-@router.post("/pairs/", deprecated=True)
-async def create_new_pair(pairs: list[str], auth=Depends(authenticate)):
-    _config = config.main()
-    _config.pair.extend(pairs)
-    config.main_manager.save(_config)
-    refresh.update_getters()
-
-
-@router.post("/pairs/update_getters")
+@router.post("/pairs/update_getters", tags=["Pair"])
 async def update_getters(auth=Depends(authenticate)):
-    refresh.update_getters()
+    core.update_getters()
 
 
-@router.post("/adapter_classes/{adapter_class:str}/reload", response_model=type(None))
-async def reload_adapter_class(adapter_class: str, auth=Depends(authenticate)):
+def _get_adapter(adapter: str):
+    return adapter
+
+
+@router.post("/adapter/", response_model=type(None), tags=["Adapter"])
+async def install_adapter(body: AdapterInstallRequestBody, auth=Depends(authenticate)):
     try:
-        refresh.reload_adapter(adapter_class)
-    except refresh.AdapterDoNotExistException():
-        raise HTTPException(404)
+        core.install_adapter(body.url)
+    except core.AdapterAlreadyExist:
+        raise HTTPException(status.HTTP_409_CONFLICT)
 
 
-@router.get("/config/{config_name:str}")
-async def get_config(config_name: str, auth=Depends(authenticate)) -> dict:
-    return config.get_config_manager(name=config_name).dict()
+@router.delete("/adapter/{adapter:str}", response_model=type(None), tags=["Adapter"])
+async def uninstall_adapter(
+    adapter: str = Depends(_get_adapter), auth=Depends(authenticate)
+):
+    try:
+        core.uninstall_adapter(adapter)
+    except core.AdapterNotFound:
+        raise HTTPException(status.HTTP_404_NOT_FOUND)
 
 
-@router.post("/config/{config_name:str}")
-async def update_config(config_name: str, new: dict, auth=Depends(authenticate)):
-    config.get_config_manager(name=config_name).save(new)
+def _get_adapter_class(adapter_class: str) -> Getter:
+    ls = [_c for _c in core.imported_adapter_classes if _c.__name__ == adapter_class]
+    if len(ls) != 0:
+        return ls[0]
+    raise HTTPException(status.HTTP_404_NOT_FOUND)
 
 
-@router.get("/getters/")
+@router.get("/adapter_classes/", tags=["AdapterClass"])
+async def list_all_adapter_classes(
+    auth=Depends(authenticate),
+) -> list[AdapterClassInfo]:
+    return [AdapterClassInfo.from_class(_c) for _c in core.imported_adapter_classes]
+
+
+@router.get("/adapter_classes/{adapter_class:str}", tags=["AdapterClass"])
+async def adapter_class(
+    adapter_class: str = Depends(_get_adapter_class), auth=Depends(authenticate)
+) -> AdapterClassInfo:
+    return AdapterClassInfo.from_class(adapter_class)
+
+
+@router.post(
+    "/adapter_classes/{adapter_class:str}/reload",
+    response_model=type(None),
+    tags=["AdapterClass"],
+)
+async def reload_adapter_class(
+    adapter_class: str = Depends(_get_adapter_class), auth=Depends(authenticate)
+):
+    core.reload_adapter_class(adapter_class)
+
+
+def _get_config_manager(config_name: str) -> config.HotReloadConfigManager:
+    return config.get_config_manager(name=config_name)
+
+
+@router.get("/config/{config_name:str}", tags=["Config"])
+async def get_config(
+    config_manager: config.HotReloadConfigManager = Depends(_get_config_manager),
+    auth=Depends(authenticate),
+) -> dict:
+    return config_manager.dict
+
+
+@router.post("/config/{config_name:str}", tags=["Config"], response_model=type(None))
+async def update_config(
+    new: dict,
+    config_manager: config.HotReloadConfigManager = Depends(_get_config_manager),
+    auth=Depends(authenticate),
+):
+    config_manager.save_dict(new)
+
+
+@router.get("/config/{config_name:str}/jsonschema", tags=["Config"])
+async def get_config_jsonschema(
+    config_manager: config.HotReloadConfigManager = Depends(_get_config_manager),
+    auth=Depends(authenticate),
+) -> dict:
+    return config_manager.jsonschema
+
+
+def _get_getter(getter_str: str) -> Getter:
+    ls = [_getter for _getter in core.registered_getters if _getter.name == getter_str]
+    if len(ls) != 0:
+        return ls[0]
+    raise HTTPException(status.HTTP_404_NOT_FOUND)
+
+
+@router.get("/getters/", tags=["Getter"])
 async def list_all_getters(auth=Depends(authenticate)) -> list[GetterInfo]:
     return [
-        asdict(GetterInfo.from_getter(getter))
-        for getter in refresh.registered_getters
+        asdict(GetterInfo.from_getter(getter)) for getter in core.registered_getters
     ]
 
 
-async def _refresh(getters):
-    result = []
-    tasks = [asyncio.tasks.Task(refresh.refresh(getter)) for getter in getters]
-    await asyncio.gather(*tasks)
-    for task in tasks:
-        result.extend(task.result())
-    return result
+@router.post("/getters/refresh", tags=["Getter"])
+async def refresh_getters_async(auth=Depends(authenticate)) -> core.RefreshResult:
+    return JSONResponse(
+        [
+            task.create_task(core.refresh(_getter))
+            for _getter in core.registered_getters
+        ],
+        status_code=status.HTTP_202_ACCEPTED,
+    )
 
 
-@router.post("/getters/refresh")
-async def refresh_getters_async(auth=Depends(authenticate)) -> refresh.RefreshResult:
-    return start_task(_refresh(refresh.registered_getters))
+@router.get("/getters/{getter:str}", tags=["Getter"])
+async def getter(
+    getter: Getter = Depends(_get_getter), auth=Depends(authenticate)
+) -> GetterInfo:
+    return GetterInfo.from_getter(getter)
 
 
-@router.get("/getters/{getter:str}")
-async def getter(getter: str, auth=Depends(authenticate)) -> GetterInfo:
-    return asdict(GetterInfo.from_getter(get_getter(getter)))
+@router.post("/getters/{getter:str}/refresh", tags=["Getter"])
+async def refresh_getter_async(
+    getter: Getter = Depends(_get_getter), auth=Depends(authenticate)
+) -> core.RefreshResult:
+    return JSONResponse(
+        task.create_task(core.refresh(getter)), status_code=status.HTTP_202_ACCEPTED
+    )
 
 
-@router.post("/getters/{getter:str}/refresh")
-async def refresh_getter_async(getter: str, auth=Depends(authenticate)) -> refresh.RefreshResult:
-    return start_task(_refresh(get_getter(getter)))
-
-
-@router.get("/articles/")
-async def list_articles(page: int = 0, page_size: int = 10, auth=Depends(authenticate)) -> list[Article]:
-    return [
-        Article(ar.id, ar.userId, ar.ts, ar.content.asdict())
-        for ar in store.Article.select().order_by(store.Article.ts.desc()).paginate(page, page_size)
-    ]
-
-
-@router.get("/articles/{id}")
-async def article(id: str, auth=Depends(authenticate)) -> Article:
+def _get_article(id: str) -> store.Article:
     ar = store.Article.get_or_none(store.Article.id == id)
     if ar:
-        return Article(id, ar.userId, ar.ts, ar.content.asdict())
+        return ar
     else:
-        raise HTTPException(404)
+        raise HTTPException(status.HTTP_404_NOT_FOUND)
 
 
-@router.get("/log/")
-async def list_log(page: int = 0, page_size: int = 10, auth=Depends(authenticate)) -> list[str]:
+@router.get("/articles/", tags=["Article"])
+async def list_articles(
+    page: int = 0, page_size: int = 10, auth=Depends(authenticate)
+) -> list[Article]:
+    return [
+        Article(ar.id, ar.userId, ar.ts, ar.content.asdict())
+        for ar in store.Article.select()
+        .order_by(store.Article.ts.desc())
+        .paginate(page, page_size)
+    ]
+
+
+@router.get("/articles/{id}", tags=["Article"])
+async def article(
+    article: store.Article = Depends(_get_article), auth=Depends(authenticate)
+) -> Article:
+    return Article(article.id, article.userId, article.ts, article.content.asdict())
+
+
+@router.get("/log/", tags=["Log"])
+async def list_log(
+    page: int = 0, page_size: int = 10, auth=Depends(authenticate)
+) -> list[str]:
     data_list = log.log_list
     start_index = max(0, len(data_list) - (page + 1) * page_size)
     end_index = len(data_list) - page * page_size
     return data_list[start_index:end_index]
 
 
-@router.get("/task/{task_id}")
-async def task_status(task_id: str, auth=Depends(authenticate)) -> Union[refresh.RefreshResult]:
-    try:
-        task: asyncio.Task = tasks[task_id]
-    except KeyError:
-        raise HTTPException(404)
-    if task.done():
-        return task.result()
+def _get_task(task_id: str):
+    if task_ := task.tasks.get(task_id):
+        return task_
     else:
-        return Response(None, 202)
+        raise HTTPException(status.HTTP_404_NOT_FOUND)
+
+
+@router.get("/task/", tags=["Task"])
+async def get_tasks(
+    done: bool | None = None,
+) -> list[str]:
+    _final_tasks = list(task.tasks.keys())
+    if done is not None:
+        if done is True:
+            _final_tasks = [
+                _taskid for _taskid in _final_tasks if task.tasks[_taskid].done()
+            ]
+        elif done is False:
+            _final_tasks = [
+                _taskid for _taskid in _final_tasks if not task.tasks[_taskid].done()
+            ]
+    return _final_tasks
+
+
+@router.get("/task/{task_id}", tags=["Task"])
+async def task_status(
+    task_: asyncio.Task = Depends(_get_task), auth=Depends(authenticate)
+) -> dict:
+    if task_.done():
+        return task_.result()
+    else:
+        return Response(None, status.HTTP_202_ACCEPTED)
+
 
 app.include_router(router)
 
 
 async def serve():
-    server = uvicorn.Server(uvicorn.Config(app, host=HOST, port=PORT, log_level='info', log_config={"version": 1, "disable_existing_loggers": False, "formatters": {}, "handlers": {}, "loggers": {"uvicorn": {"handlers": [], "level": "INFO", "propagate": False}, "uvicorn.error": {"handlers": [], "level": "INFO", "propagate": False}, "uvicorn.access": {"handlers": [], "level": "INFO", "propagate": False}, }, }))
+    server = uvicorn.Server(
+        uvicorn.Config(
+            app,
+            host=HOST,
+            port=PORT,
+            log_config={
+                "version": 1,
+                "disable_existing_loggers": False,
+                "formatters": {},
+                "handlers": {},
+                "loggers": {
+                    "uvicorn": {"handlers": [], "level": "DEBUG", "propagate": False},
+                    "uvicorn.error": {
+                        "handlers": [],
+                        "level": "DEBUG",
+                        "propagate": False,
+                    },
+                    "uvicorn.access": {
+                        "handlers": [],
+                        "level": "WARNING",
+                        "propagate": False,
+                    },
+                },
+            },
+        )
+    )
 
-    logging.getLogger('uvicorn').handlers = logging.root.handlers
-    logging.getLogger('uvicorn.error').handlers = logging.root.handlers
-    logging.getLogger('uvicorn.error').name = 'uvicorn'
-    logging.getLogger('uvicorn.access').handlers = logging.root.handlers
+    logging.getLogger("uvicorn").handlers = logging.root.handlers
+    logging.getLogger("uvicorn.error").handlers = logging.root.handlers
+    logging.getLogger("uvicorn.access").handlers = logging.root.handlers
 
     await server.serve()

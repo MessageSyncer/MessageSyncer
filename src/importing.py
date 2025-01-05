@@ -1,105 +1,75 @@
 import importlib
-import sys
-import subprocess
+import importlib.util
 import logging
-import pkg_resources
-from dataclasses import dataclass
+import os
+import subprocess
+import sys
 from pathlib import Path
 
+import pkg_resources
 
-@dataclass
-class ObjectImportingDetail:
-    attr_name: str
-    obj: object
-    module: 'importlib.ModuleType'
-    module_name: str
-    path: Path
+import image
+import runtime
 
-    def reload(self) -> bool:
-        global details
-        logger = logging.getLogger(f'reload-{self.attr_name}')
-        logger.debug('Start reload module')
-
-        if self.path.exists():
-            if not self.path.is_file():
-                try_install_requirements(self.path)
-            export_all_from_module(importlib.reload(self.module), self.module_name, self.path)
-            logger.debug('Succeed')
-            return True
-        else:
-            details.pop(self.attr_name)
-            logger.debug('Failed')
-            return False
+dep_path = Path("data") / "dep"
+dep_path.mkdir(parents=True, exist_ok=True)
+sys.path.append(str(dep_path.absolute()))
+pkg_resources.working_set.add_entry(str(dep_path.absolute()))
 
 
-details: dict[str, ObjectImportingDetail] = {}
-
-
-def install_package(package_name):
-    try:
-        logging.debug(f'Installing {package_name}')
-        subprocess.check_call([sys.executable, "-m", "pip", "install", package_name])
-        logging.debug(f'Installing {package_name} succeed')
-    except subprocess.CalledProcessError as e:
-        logging.debug(f'Installing {package_name} failed: {e}')
-
-
-def try_install_requirements(path: Path):
-    requirements_file = path / 'requirements.txt'
-
+def try_install_requirementstxt(requirements_file: Path):
     if not requirements_file.exists():
+        # logging.warning(f'Failed to install {requirements_file}: file not exists')
         return
 
-    with open(requirements_file, 'r') as file:
-        requirements = file.readlines()
+    for requirement_str in requirements_file.read_text("utf-8").split("\n"):
+        requirement_str = requirement_str.strip()
 
-    logger = logging.getLogger('requirements_checker')
-
-    for requirement in requirements:
-        requirement = requirement.strip()
         try:
-            pkg_resources.require(requirement)
-            logger.debug(f"{requirement} already satisfied")
-        except pkg_resources.DistributionNotFound:
-            logger.debug(f"{requirement} is not installed")
-            install_package(requirement)
-        except pkg_resources.VersionConflict as e:
-            logger.debug(f"{requirement} has a version conflict: {e.report()}")
-            install_package(requirement)
+            version = importlib.metadata.version(requirement_str)
+            installed = True
+            logging.debug(f"Check requirement: {requirement_str}: exists, {version}")
+        except Exception as e:
+            logging.debug(f"Check requirement: {requirement_str}: {e}")
+            installed = False
+
+        if not installed:
+            try:
+                logging.debug(f"Trying to install {requirement_str}")
+                subprocess.check_call(
+                    [
+                        runtime.pip,
+                        "install",
+                        requirement_str,
+                        "--target",
+                        str(dep_path.absolute()),
+                    ]
+                )
+                logging.debug(f"Successfully installed {requirement_str}")
+            except Exception as e:
+                logging.warning(f"Failed to install {requirement_str}: {e}")
 
 
-def export_all_from_module(module, module_name, module_path):
-    global details
-    do_cover = True
-    for attr in dir(module):
-        if (not attr in details or do_cover) and not attr.startswith('_'):
-            details[attr] = ObjectImportingDetail(attr, getattr(module, attr), module, module_name, module_path)
-    logging.debug(f'{module_name} loaded from {module_path}')
+def from_package_import_attr(pkg: str, path: Path, attr: str, force_reload=False):
+    if str(path.parent.absolute()) not in sys.path:
+        sys.path.append(str(path.parent.absolute()))
 
-def import_all(paths):
-    for path in paths:
-        if not path.exists():
-            raise ValueError(f"The path {path} does not exist.")
+    if force_reload:
+        try:
+            sys.modules.pop(pkg)
+        except:
+            pass
 
-        path = path.resolve()
-        sys.path.append(str(path))
+    if not (path / "__init__.py").exists():
+        raise Exception(f"Failed to import package {pkg}: not a vaild package")
+    if pkg not in sys.modules:
+        try_install_requirementstxt(path / "requirements.txt")
 
-        for item in path.glob('*'):
-            if not [i for i in details.values() if i.path == item]:
-                if item.is_dir() and (item / '__init__.py').exists():
-                    # Import everything in the package
-                    try:
-                        try_install_requirements(item)
-                        module_name = item.relative_to(path.parent).as_posix().replace('/', '.')
-                        module = importlib.import_module(module_name)
-                        export_all_from_module(module, module_name, item)
-                    except Exception as e:
-                        pass
-                elif item.is_file() and item.suffix == '.py' and item.name != '__init__.py':
-                    # Import everything from a single Python file
-                    try:
-                        module_name = item.relative_to(path.parent).with_suffix('').as_posix().replace('/', '.')
-                        module = importlib.import_module(module_name)
-                        export_all_from_module(module, module_name, item)
-                    except Exception as e:
-                        pass
+    attr_obj = getattr(importlib.import_module(pkg), attr)
+    try:
+        setattr(attr_obj, "_import_path", path)
+        setattr(attr_obj, "_import_pkg", pkg)
+    except:
+        pass
+
+    return attr_obj

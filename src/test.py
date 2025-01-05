@@ -1,7 +1,16 @@
-from model import *
+import os
+import sys
+
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 import asyncio
 
+from model import *
+
+
 async def main():
+
     pass
+
+
 asyncio.run(main())

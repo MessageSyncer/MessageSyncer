@@ -1,27 +1,33 @@
-from model import *
-from util import *
-
 import asyncio
+import datetime
 import logging
-import config
-import refresh
-import log
+import os
+import sys
+
 import api
-import getters
-import pushers
-import importing
+import config
+import core
+import log
+import runtime
+from model import *
 
 
 async def main():
-    refresh.main_event_loop = asyncio.get_event_loop()
-    refresh.update_getters()
+    core.main_event_loop = asyncio.get_event_loop()
+    core.update_getters()
 
     await api.serve()
 
-if __name__ == '__main__':
-    logging.info(f'MessageSyncer started at {Path().absolute()}')
-    logging.info(f'Commit: {config.messagesyncer_detail().version_commit}')
+
+if __name__ == "__main__":
+    log.init()
+    logging.info(f"MessageSyncer ({runtime.version}) started")
+    logging.info(f"at {Path().absolute()}")
+    if runtime.run_in_frozen_mode:
+        logging.debug(
+            f"frozen at {sys._MEIPASS}, build time: {datetime.datetime.fromtimestamp(runtime.build_time)}"
+        )
     try:
         asyncio.run(main())
     except KeyboardInterrupt:
-        logging.info(f'MessageSyncer exited')
+        logging.info(f"MessageSyncer exited")

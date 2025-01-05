@@ -1,10 +1,8 @@
 # Kept by MessageSyncer
-src/pushers/*
-src/getters/*
-!src/pushers/__init__.py
-!src/getters/__init__.py
+src/version.py
+src/runtimeinfo.py
 data/
-tools/
+static/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
@@ -137,6 +135,13 @@ venv/
 ENV/
 env.bak/
 venv.bak/
+.env.bak/
+.venv.bak/
+.env.linux
+.env.win
+.venv.linux
+.venv.win
+.secrets
 
 # Spyder project settings
 .spyderproject

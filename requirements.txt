@@ -1,0 +1,17 @@
+aiocron==1.8
+peewee==3.17.8
+pillow==11.0.0
+pyyaml==6.0.2
+requests==2.32.3
+fastapi==0.115.6
+uvicorn==0.34.0
+colorlog==6.9.0
+gitpython==3.1.43
+
+# Development dependencies
+pre-commit==4.0.1
+black==24.10.0
+flake8==7.1.1
+isort==5.13.2
+pytest==8.3.4
+pyinstaller==6.11.1

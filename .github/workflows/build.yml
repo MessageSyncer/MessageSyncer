@@ -1,0 +1,59 @@
+name: Build Executable File
+
+on:
+  push:
+    tags: ["v*.*.*"]
+  workflow_dispatch:
+
+jobs:
+  build_executable:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-22.04, windows-2022]
+        # arch: [x86_64, arm64]
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11.9"
+          cache: "pip"
+
+      - if: runner.os == 'Windows'
+        run: echo "filename=MessageSyncer-Windows.exe" >> $env:GITHUB_ENV
+      
+      - if: runner.os == 'Linux'
+        run: echo "filename=MessageSyncer-Linux" >> $GITHUB_ENV
+
+      - name: Setup (Windows)
+        if: runner.os == 'Windows'
+        run: |
+          pwsh ./tool/setup.ps1 -NoDev
+
+      - name: Setup (Ubuntu)
+        if: runner.os == 'Linux'
+        run: |
+          bash ./tool/setup.sh --no-dev
+
+      - name: Build (Windows)
+        if: runner.os == 'Windows'
+        run: |
+          .\.venv\Scripts\activate
+          python tool/build.py "${{ env.filename }}"
+
+      - name: Build (Ubuntu)
+        if: runner.os == 'Linux'
+        run: |
+          source ./.venv/bin/activate
+          python tool/build.py "${{ env.filename }}"
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            dist/${{ env.filename }}
+            dist/${{ env.filename }}.sha256
