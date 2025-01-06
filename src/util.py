@@ -9,8 +9,6 @@ from typing import Any, Dict, List, Type, Union
 import git
 import requests
 
-import log
-
 
 def generate_function_call_str(function, *args, **kwargs):
     args_str = ", ".join(repr(arg) for arg in args)
@@ -20,7 +18,6 @@ def generate_function_call_str(function, *args, **kwargs):
 
 
 def download(url, path: Path):
-    log.debug(f"Start to download from {url} to {path}")
     response = requests.get(url, proxies={})
     if response.status_code == 200:
         path.write_bytes(response.content)
