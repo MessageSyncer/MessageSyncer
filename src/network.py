@@ -1,4 +1,3 @@
-import logging
 import time
 from datetime import datetime
 from unittest.mock import patch
@@ -7,6 +6,7 @@ import requests
 
 import config
 import const
+import log
 import util
 
 
@@ -20,7 +20,7 @@ original_request_method = requests.Session.request
 
 def requests_proxy(*args, **kwargs):
     kwargs = _process_proxy(kwargs)
-    logger = logging.getLogger("requests_proxy")
+    logger = log.getLogger("requests_proxy")
     total_str = util.generate_function_call_str(
         "requests.Session.request", *args, **kwargs
     )

@@ -1,9 +1,9 @@
 import asyncio
-import logging
 import time
 import types
 
 import const
+import log
 
 tasks: dict[str, asyncio.Task] = {}
 tasklist_maxlength = const.TASKLIST_MAXLENGTH

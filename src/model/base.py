@@ -1,10 +1,10 @@
-import logging
 import typing
 from abc import ABC, abstractmethod
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Generic, TypeVar
 
+import log
 from config import get_config_manager
 
 from .struct import Struct
@@ -65,7 +65,7 @@ class Adapter(ABC, Generic[TADAPTERCONFIG, TADAPTERINSTANCECONFIG]):
         else:
             self.instance_config_manager = None
 
-        self.logger = logging.getLogger(self.name)
+        self.logger = log.getLogger(self.name)
 
     @property
     def config(self) -> TADAPTERCONFIG:

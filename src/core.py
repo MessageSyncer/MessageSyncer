@@ -55,7 +55,7 @@ async def push_to(pusher, content: Struct):
     preview_str = content.as_preview_str()
     hash_ = hash(content)
 
-    logger = logging.getLogger("push")
+    logger = log.getLogger("push")
     logger.debug(f"{pusher}: {hash_}: start: {preview_str}")
     await pusher.push(content, **detail)
     logger.debug(f"{pusher}: {hash_}: finished")
@@ -73,14 +73,14 @@ def register_getter(getter: Getter):
     if _get_config().policy.refresh_when_start:
         asyncio.create_task(refresh(getter))
     registered_getters.append(getter)
-    logging.debug(f"Getter registered: {getter}")
+    log.debug(f"Getter registered: {getter}")
 
 
 def unregister_getter(getter: Getter):
     for trigger in list(getter._triggers.keys()):
         unregister_corn(getter, trigger)
     registered_getters.remove(getter)
-    logging.debug(f"Getter unregistered: {getter}")
+    log.debug(f"Getter unregistered: {getter}")
 
 
 def update_trigger(getter: Getter):
@@ -141,7 +141,7 @@ def reload_adapter_class(curclass: type):
 
 
 def install_adapter(repo_url: str):
-    logging.debug(f"Install adapter from {repo_url}")
+    log.debug(f"Install adapter from {repo_url}")
 
     name = Path(repo_url).name.replace(".git", "")
     path = adapter_classes_path / name
@@ -151,7 +151,7 @@ def install_adapter(repo_url: str):
 
 
 def uninstall_adapter(name: str):
-    logging.debug(f"Uninstall adapter {name}")
+    log.debug(f"Uninstall adapter {name}")
 
     path = adapter_classes_path / name
     if not path.exists():
@@ -185,7 +185,7 @@ def _parse_pairs():
             getter_class = _get_or_import_class(getter_class_name, adapter_classes_path)
             pusher_class = _get_or_import_class(pusher_class_name, adapter_classes_path)
         except Exception as e:
-            logging.warning(f"Failed to parse {pair_str}: {e}. Skipped", exc_info=True)
+            log.warning(f"Failed to parse {pair_str}: {e}. Skipped", exc_info=True)
             continue
 
         if matched := [
@@ -196,7 +196,7 @@ def _parse_pairs():
             getter = matched[0]
         else:
             getter = getter_class(getter_id)
-            logging.debug(f"{getter} initialized")
+            log.debug(f"{getter} initialized")
 
         result.setdefault(getter, []).append(pusher_str)
     return result
@@ -222,7 +222,7 @@ async def warning(content: Struct):
         for pusher in pushto:
             await push_to(pusher, content)
     except Exception as e:
-        logging.fatal(f"Failure to issue alarm: {e}", exc_info=True)
+        log.fatal(f"Failure to issue alarm: {e}", exc_info=True)
 
 
 @dataclass
@@ -254,7 +254,7 @@ async def refresh(getter: Getter) -> RefreshResult:
 
 
 async def refresh_worker(getter: Getter) -> RefreshResult:
-    logger = logging.getLogger("_refresh_worker")
+    logger = log.getLogger("_refresh_worker")
     prefix = getter.class_name + "_"
 
     logger.debug(f"start")

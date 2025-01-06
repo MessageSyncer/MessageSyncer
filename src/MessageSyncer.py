@@ -1,6 +1,5 @@
 import asyncio
 import datetime
-import logging
 import os
 import sys
 
@@ -20,14 +19,13 @@ async def main():
 
 
 if __name__ == "__main__":
-    log.init()
-    logging.info(f"MessageSyncer ({runtime.version}) started")
-    logging.info(f"at {Path().absolute()}")
+    log.info(f"MessageSyncer ({runtime.version}) started")
+    log.info(f"at {Path().absolute()}")
     if runtime.run_in_frozen_mode:
-        logging.debug(
+        log.debug(
             f"frozen at {sys._MEIPASS}, build time: {datetime.datetime.fromtimestamp(runtime.build_time)}"
         )
     try:
         asyncio.run(main())
     except KeyboardInterrupt:
-        logging.info(f"MessageSyncer exited")
+        log.info(f"MessageSyncer exited")

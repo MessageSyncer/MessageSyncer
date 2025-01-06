@@ -1,6 +1,5 @@
 import importlib
 import importlib.util
-import logging
 import os
 import subprocess
 import sys
@@ -9,6 +8,7 @@ from pathlib import Path
 import pkg_resources
 
 import image
+import log
 import runtime
 
 dep_path = Path("data") / "dep"
@@ -19,7 +19,7 @@ pkg_resources.working_set.add_entry(str(dep_path.absolute()))
 
 def try_install_requirementstxt(requirements_file: Path):
     if not requirements_file.exists():
-        # logging.warning(f'Failed to install {requirements_file}: file not exists')
+        # log.warning(f'Failed to install {requirements_file}: file not exists')
         return
 
     for requirement_str in requirements_file.read_text("utf-8").split("\n"):
@@ -28,14 +28,14 @@ def try_install_requirementstxt(requirements_file: Path):
         try:
             version = importlib.metadata.version(requirement_str)
             installed = True
-            logging.debug(f"Check requirement: {requirement_str}: exists, {version}")
+            log.debug(f"Check requirement: {requirement_str}: exists, {version}")
         except Exception as e:
-            logging.debug(f"Check requirement: {requirement_str}: {e}")
+            log.debug(f"Check requirement: {requirement_str}: {e}")
             installed = False
 
         if not installed:
             try:
-                logging.debug(f"Trying to install {requirement_str}")
+                log.debug(f"Trying to install {requirement_str}")
                 subprocess.check_call(
                     [
                         runtime.pip,
@@ -45,9 +45,9 @@ def try_install_requirementstxt(requirements_file: Path):
                         str(dep_path.absolute()),
                     ]
                 )
-                logging.debug(f"Successfully installed {requirement_str}")
+                log.debug(f"Successfully installed {requirement_str}")
             except Exception as e:
-                logging.warning(f"Failed to install {requirement_str}: {e}")
+                log.warning(f"Failed to install {requirement_str}: {e}")
 
 
 def from_package_import_attr(pkg: str, path: Path, attr: str, force_reload=False):

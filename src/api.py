@@ -1,5 +1,4 @@
 import asyncio
-import logging
 import time
 from typing import Annotated, Any, Optional, Union
 
@@ -355,8 +354,8 @@ async def serve():
         )
     )
 
-    logging.getLogger("uvicorn").handlers = logging.root.handlers
-    logging.getLogger("uvicorn.error").handlers = logging.root.handlers
-    logging.getLogger("uvicorn.access").handlers = logging.root.handlers
+    log.getLogger("uvicorn").handlers = log.root.handlers
+    log.getLogger("uvicorn.error").handlers = log.root.handlers
+    log.getLogger("uvicorn.access").handlers = log.root.handlers
 
     await server.serve()

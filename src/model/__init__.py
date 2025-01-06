@@ -1,10 +1,10 @@
-import logging
 import shutil
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import List
 
 import importing
+import log
 
 from .base import Adapter
 from .getter_base import GetResult, Getter, GetterConfig, GetterInstanceConfig
@@ -18,23 +18,21 @@ adapter_classes_path.mkdir(parents=True, exist_ok=True)
 def _migrate():
     # TOV2
     old_paths = [Path() / "src" / "getters", Path() / "src" / "pushers"]
-    logger = logging.getLogger("base._migrate")
+    logger = log.getLogger("base._migrate")
 
     for old_path in old_paths:
         if old_path.exists():
-            logging.info("Old adapters path detected")
+            log.info("Old adapters path detected")
             for item in old_path.iterdir():
                 try:
                     shutil.move(str(item), str(adapter_classes_path))
-                    logging.info(
-                        f"Successfully moved {item} to new adapter_classes_path"
-                    )
+                    log.info(f"Successfully moved {item} to new adapter_classes_path")
                 except Exception as e:
                     logger.warning(
                         f"Failed to move {item} to {adapter_classes_path}: {e}"
                     )
             try:
-                old_path.rmdir()
+                shutil.rmtree(str(old_path))
             except Exception as e:
                 logger.warning(f"Failed to rmdir {old_path}: {e}")
 

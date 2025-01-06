@@ -1,5 +1,7 @@
 import logging
 from datetime import datetime
+from logging import *
+from logging import root
 from pathlib import Path
 
 import colorlog
@@ -64,3 +66,6 @@ def get_logging_handlers(log_name):
 def init():
     # [logging.getLogger(name).setLevel(logging.INFO) for name in ('peewee', 'asyncio', 'tzlocal', 'PIL.Image')]
     logging.basicConfig(level=logging.DEBUG, handlers=get_logging_handlers("root"))
+
+
+init()

@@ -1,6 +1,5 @@
 import asyncio
 import dataclasses
-import logging
 import re
 import shutil
 import subprocess
@@ -9,6 +8,8 @@ from typing import Any, Dict, List, Type, Union
 
 import git
 import requests
+
+import log
 
 
 def generate_function_call_str(function, *args, **kwargs):
@@ -19,7 +20,7 @@ def generate_function_call_str(function, *args, **kwargs):
 
 
 def download(url, path: Path):
-    logging.debug(f"Start to download from {url} to {path}")
+    log.debug(f"Start to download from {url} to {path}")
     response = requests.get(url, proxies={})
     if response.status_code == 200:
         path.write_bytes(response.content)
