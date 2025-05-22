@@ -1,4 +1,5 @@
 import asyncio
+import mimetypes
 import time
 from typing import Annotated, Any, Optional, Union
 
@@ -15,7 +16,7 @@ from fastapi import (
     status,
 )
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse, RedirectResponse
+from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 import config
@@ -326,6 +327,17 @@ async def task_status(
         return task_.result()
     else:
         return Response(None, status.HTTP_202_ACCEPTED)
+
+
+def _get_img(img_id):
+    img = store.ImageStorage.get_or_none(store.ImageStorage.id == img_id)
+    return img
+
+
+@res_router.get("/img/{img_id}", tags=["Task"])
+async def get_img(img: asyncio.Task = Depends(_get_img)) -> dict:
+    file_path = Path("data/pic") / img.filename
+    return FileResponse(str(file_path.absolute()), media_type=img.mime)
 
 
 app.include_router(api_router)
