@@ -3,7 +3,6 @@ from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import List
 
-import importing
 import log
 
 from .base import Adapter

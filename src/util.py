@@ -5,9 +5,11 @@ import shutil
 import subprocess
 from pathlib import Path
 from typing import Any, Dict, List, Type, Union
+from urllib.parse import urlparse
 
 import git
 import requests
+from PIL import Image
 
 
 def generate_function_call_str(function, *args, **kwargs):
@@ -145,3 +147,49 @@ def set_nested_value(d: dict, path, value):
             d[key] = value
         else:
             d = d.setdefault(key, {})
+
+
+def is_local_or_url(path_str: str) -> str:
+    """
+    Determine whether the string is a local path or a web link
+    Returns "local" or "url"
+    """
+    path_str = path_str.strip()
+
+    # Determine whether it is a URL
+    parsed = urlparse(path_str)
+    if parsed.scheme in ["http", "https"] and parsed.netloc:
+        return "url"
+
+    # Determine whether it is a local file path
+    path = Path(path_str)
+    if path.exists() or path_str.startswith(("/", "./", "../", "~")):
+        return "local"
+
+    # A local file that may be a relative path but does not exist is also local
+    if not re.match(r"^https?://", path_str):
+        return "local"
+
+    # default processing
+    return "unknown"
+
+
+def get_image_mime_suffix(file_path: str) -> str:
+    FORMAT_TO_MIME_SUFFIX = {
+        "JPEG": "jpeg",
+        "PNG": "png",
+        "GIF": "gif",
+        "BMP": "bmp",
+        "TIFF": "tiff",
+        "WEBP": "webp",
+    }
+    try:
+        with Image.open(file_path) as img:
+            fmt = img.format
+            suffix = FORMAT_TO_MIME_SUFFIX.get(fmt.upper())
+            if suffix:
+                return suffix
+            else:
+                raise ValueError(f"Unsupported image format: {fmt}")
+    except Exception as e:
+        raise ValueError(f"Cannot open image file: {e}")

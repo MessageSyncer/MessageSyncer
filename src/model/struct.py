@@ -55,6 +55,10 @@ class StructImage(StructElement):
     def asmarkdown(self) -> str:
         return f"![{self.alt}]({self.source})\n"
 
+    @property
+    def islocal(self):
+        return util.is_local_or_url(self.source) == "local"
+
 
 @dataclass
 class StructURL(StructElement):

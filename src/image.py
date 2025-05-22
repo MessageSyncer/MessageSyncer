@@ -1,12 +1,17 @@
 import asyncio
 import base64
+import random
+import string
+from hashlib import sha256
 from pathlib import Path
 from typing import Callable
 from urllib.parse import urlparse
 
 from PIL import Image
 
+import store
 import util
+from model.struct import StructImage
 
 path = Path() / "data" / "pic"
 path.mkdir(parents=True, exist_ok=True)
@@ -69,3 +74,25 @@ async def download_withcache(url) -> tuple[str, bool]:
         return _path.absolute(), True
     else:
         return _path.absolute(), False
+
+
+def get_public_url(img: StructImage, messagesyncer_base_url: str) -> str:
+    if img.islocal:
+        id_ = ""
+        path = Path(img.source)
+        filename = path.name
+
+        if query_res := store.ImageStorage.get_or_none(
+            store.ImageStorage.filename == filename
+        ):
+            id_ = query_res.id
+        else:
+            hash_src = filename + "".join(
+                random.choices(string.ascii_letters + string.digits, k=8)
+            )
+            id_ = sha256(hash_src.encode()).hexdigest().lower()[0:32]
+            mime = util.get_image_mime_suffix(str(path.absolute()))
+            store.ImageStorage.create(filename=filename, id=id_, mime=mime)
+        return f"{messagesyncer_base_url}/res/img/{id_}"
+    else:
+        return img.source
