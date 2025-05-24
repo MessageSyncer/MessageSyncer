@@ -334,7 +334,7 @@ def _get_img(img_id):
     return img
 
 
-@res_router.get("/img/{img_id}", tags=["Task"])
+@res_router.get("/img/{img_id}", tags=["Image"])
 async def get_img(img: asyncio.Task = Depends(_get_img)) -> dict:
     file_path = Path("data/pic") / img.filename
     return FileResponse(str(file_path.absolute()), media_type=img.mime)
