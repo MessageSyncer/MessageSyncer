@@ -217,8 +217,8 @@ async def get_config_jsonschema(
     return config_manager.jsonschema
 
 
-def _get_getter(getter_str: str) -> Getter:
-    ls = [_getter for _getter in core.registered_getters if _getter.name == getter_str]
+def _get_getter(getter: str) -> Getter:
+    ls = [_getter for _getter in core.registered_getters if _getter.name == getter]
     if len(ls) != 0:
         return ls[0]
     raise HTTPException(status.HTTP_404_NOT_FOUND)
