@@ -55,7 +55,7 @@ class StructImage(StructElement):
     def asmarkdown(self, source=None) -> str:
         if source is None:
             source = self.source
-        return f"![{self.alt}]({self.source})  \n"
+        return f"![{self.alt}]({source})  \n"
 
     @property
     def islocal(self):
