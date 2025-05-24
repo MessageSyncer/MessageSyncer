@@ -1,4 +1,5 @@
 import asyncio
+import mimetypes
 import time
 from typing import Annotated, Any, Optional, Union
 
@@ -15,7 +16,7 @@ from fastapi import (
     status,
 )
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse, RedirectResponse
+from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 import config
@@ -36,7 +37,8 @@ PORT = config.main().api.port
 VERSION = 20241222
 
 app = FastAPI(title="MessageSyncerAPI", version=str(VERSION))
-router = APIRouter(prefix="/api")
+api_router = APIRouter(prefix="/api")
+res_router = APIRouter(prefix="/res")
 
 app.add_middleware(
     CORSMiddleware,
@@ -113,7 +115,7 @@ async def _():
     return RedirectResponse("./docs")
 
 
-@router.get("/")
+@api_router.get("/")
 async def hello_world() -> dict:
     return {
         "version": {
@@ -123,7 +125,7 @@ async def hello_world() -> dict:
     }
 
 
-@router.post("/pairs/update_getters", tags=["Pair"])
+@api_router.post("/pairs/update_getters", tags=["Pair"])
 async def update_getters(auth=Depends(authenticate)):
     core.update_getters()
 
@@ -132,7 +134,7 @@ def _get_adapter(adapter: str):
     return adapter
 
 
-@router.post("/adapter/", response_model=type(None), tags=["Adapter"])
+@api_router.post("/adapter/", response_model=type(None), tags=["Adapter"])
 async def install_adapter(body: AdapterInstallRequestBody, auth=Depends(authenticate)):
     try:
         core.install_adapter(body.url)
@@ -140,7 +142,9 @@ async def install_adapter(body: AdapterInstallRequestBody, auth=Depends(authenti
         raise HTTPException(status.HTTP_409_CONFLICT)
 
 
-@router.delete("/adapter/{adapter:str}", response_model=type(None), tags=["Adapter"])
+@api_router.delete(
+    "/adapter/{adapter:str}", response_model=type(None), tags=["Adapter"]
+)
 async def uninstall_adapter(
     adapter: str = Depends(_get_adapter), auth=Depends(authenticate)
 ):
@@ -157,21 +161,21 @@ def _get_adapter_class(adapter_class: str) -> Getter:
     raise HTTPException(status.HTTP_404_NOT_FOUND)
 
 
-@router.get("/adapter_classes/", tags=["AdapterClass"])
+@api_router.get("/adapter_classes/", tags=["AdapterClass"])
 async def list_all_adapter_classes(
     auth=Depends(authenticate),
 ) -> list[AdapterClassInfo]:
     return [AdapterClassInfo.from_class(_c) for _c in core.imported_adapter_classes]
 
 
-@router.get("/adapter_classes/{adapter_class:str}", tags=["AdapterClass"])
+@api_router.get("/adapter_classes/{adapter_class:str}", tags=["AdapterClass"])
 async def adapter_class(
     adapter_class: str = Depends(_get_adapter_class), auth=Depends(authenticate)
 ) -> AdapterClassInfo:
     return AdapterClassInfo.from_class(adapter_class)
 
 
-@router.post(
+@api_router.post(
     "/adapter_classes/{adapter_class:str}/reload",
     response_model=type(None),
     tags=["AdapterClass"],
@@ -186,7 +190,7 @@ def _get_config_manager(config_name: str) -> config.HotReloadConfigManager:
     return config.get_config_manager(name=config_name)
 
 
-@router.get("/config/{config_name:str}", tags=["Config"])
+@api_router.get("/config/{config_name:str}", tags=["Config"])
 async def get_config(
     config_manager: config.HotReloadConfigManager = Depends(_get_config_manager),
     auth=Depends(authenticate),
@@ -194,7 +198,9 @@ async def get_config(
     return config_manager.dict
 
 
-@router.post("/config/{config_name:str}", tags=["Config"], response_model=type(None))
+@api_router.post(
+    "/config/{config_name:str}", tags=["Config"], response_model=type(None)
+)
 async def update_config(
     new: dict,
     config_manager: config.HotReloadConfigManager = Depends(_get_config_manager),
@@ -203,7 +209,7 @@ async def update_config(
     config_manager.save_dict(new)
 
 
-@router.get("/config/{config_name:str}/jsonschema", tags=["Config"])
+@api_router.get("/config/{config_name:str}/jsonschema", tags=["Config"])
 async def get_config_jsonschema(
     config_manager: config.HotReloadConfigManager = Depends(_get_config_manager),
     auth=Depends(authenticate),
@@ -218,14 +224,14 @@ def _get_getter(getter_str: str) -> Getter:
     raise HTTPException(status.HTTP_404_NOT_FOUND)
 
 
-@router.get("/getters/", tags=["Getter"])
+@api_router.get("/getters/", tags=["Getter"])
 async def list_all_getters(auth=Depends(authenticate)) -> list[GetterInfo]:
     return [
         asdict(GetterInfo.from_getter(getter)) for getter in core.registered_getters
     ]
 
 
-@router.post("/getters/refresh", tags=["Getter"])
+@api_router.post("/getters/refresh", tags=["Getter"])
 async def refresh_getters_async(auth=Depends(authenticate)) -> core.RefreshResult:
     return JSONResponse(
         [
@@ -236,14 +242,14 @@ async def refresh_getters_async(auth=Depends(authenticate)) -> core.RefreshResul
     )
 
 
-@router.get("/getters/{getter:str}", tags=["Getter"])
+@api_router.get("/getters/{getter:str}", tags=["Getter"])
 async def getter(
     getter: Getter = Depends(_get_getter), auth=Depends(authenticate)
 ) -> GetterInfo:
     return GetterInfo.from_getter(getter)
 
 
-@router.post("/getters/{getter:str}/refresh", tags=["Getter"])
+@api_router.post("/getters/{getter:str}/refresh", tags=["Getter"])
 async def refresh_getter_async(
     getter: Getter = Depends(_get_getter), auth=Depends(authenticate)
 ) -> core.RefreshResult:
@@ -260,7 +266,7 @@ def _get_article(id: str) -> store.Article:
         raise HTTPException(status.HTTP_404_NOT_FOUND)
 
 
-@router.get("/articles/", tags=["Article"])
+@api_router.get("/articles/", tags=["Article"])
 async def list_articles(
     page: int = 0, page_size: int = 10, auth=Depends(authenticate)
 ) -> list[Article]:
@@ -272,14 +278,14 @@ async def list_articles(
     ]
 
 
-@router.get("/articles/{id}", tags=["Article"])
+@api_router.get("/articles/{id}", tags=["Article"])
 async def article(
     article: store.Article = Depends(_get_article), auth=Depends(authenticate)
 ) -> Article:
     return Article(article.id, article.userId, article.ts, article.content.asdict())
 
 
-@router.get("/log/", tags=["Log"])
+@api_router.get("/log/", tags=["Log"])
 async def list_log(
     page: int = 0, page_size: int = 10, auth=Depends(authenticate)
 ) -> list[str]:
@@ -296,7 +302,7 @@ def _get_task(task_id: str):
         raise HTTPException(status.HTTP_404_NOT_FOUND)
 
 
-@router.get("/task/", tags=["Task"])
+@api_router.get("/task/", tags=["Task"])
 async def get_tasks(
     done: bool | None = None,
 ) -> list[str]:
@@ -313,7 +319,7 @@ async def get_tasks(
     return _final_tasks
 
 
-@router.get("/task/{task_id}", tags=["Task"])
+@api_router.get("/task/{task_id}", tags=["Task"])
 async def task_status(
     task_: asyncio.Task = Depends(_get_task), auth=Depends(authenticate)
 ) -> dict:
@@ -323,7 +329,19 @@ async def task_status(
         return Response(None, status.HTTP_202_ACCEPTED)
 
 
-app.include_router(router)
+def _get_img(img_id):
+    img = store.ImageStorage.get_or_none(store.ImageStorage.id == img_id)
+    return img
+
+
+@res_router.get("/img/{img_id}", tags=["Image"])
+async def get_img(img: asyncio.Task = Depends(_get_img)) -> dict:
+    file_path = Path("data/pic") / img.filename
+    return FileResponse(str(file_path.absolute()), media_type=img.mime)
+
+
+app.include_router(api_router)
+app.include_router(res_router)
 
 
 async def serve():

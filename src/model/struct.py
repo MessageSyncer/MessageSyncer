@@ -29,7 +29,7 @@ class StructText(StructElement):
             finalstr = f"**{finalstr}**"
         if self.italic:
             finalstr = f"*{finalstr}*"
-        return self.text
+        return self.text.replace("\n", "  \n")
 
 
 @dataclass
@@ -41,7 +41,7 @@ class StructTitle(StructText):
 
     def asmarkdown(self) -> str:
         finalstr = super().asmarkdown()
-        return "#" * self.heading + " " + finalstr + "\n"
+        return "#" * self.heading + " " + finalstr + "  \n"
 
 
 @dataclass
@@ -52,8 +52,14 @@ class StructImage(StructElement):
     def __str__(self) -> str:
         return "\n"
 
-    def asmarkdown(self) -> str:
-        return f"![{self.alt}]({self.source})\n"
+    def asmarkdown(self, source=None) -> str:
+        if source is None:
+            source = self.source
+        return f"![{self.alt}]({source})  \n"
+
+    @property
+    def islocal(self):
+        return util.is_local_or_url(self.source) == "local"
 
 
 @dataclass
@@ -142,24 +148,26 @@ class Struct:
         Author · Time · detail1 · detail2 · detailn
         url
         """
-        if ip != "":
-            ip = f" · {ip}"
-        if detail != "":
-            detail = f" · {detail}"
+        detail_line = "\n"
+
         if username != "":
-            username = username + " · "
+            detail_line += username
+
+        detail_line += f" · {datetime.fromtimestamp(ts).strftime('%H:%M')}"
+
+        if ip != "":
+            detail_line += f" · {ip}"
+
+        if detail != "":
+            detail_line += f" · {detail}"
+
         if url != "":
-            url = "\n" + url
+            detail_line += "\n" + url
 
         result = Struct()
         if isinstance(content, Struct):
             if title != "":
-                title = title + "\n"
-                result.text(f"{title}")
-            # element_last = content.content[-1]
-            # if type(element_last) == StructText:
-            #    if not element_last.text.endswith('\n'):
-            #        element_last.text += '\n'
+                result.text(f"{title}\n\n")
             result.extend(content)
         elif isinstance(content, str):
             if title != "":
@@ -168,8 +176,6 @@ class Struct:
                 content += "\n"
             result.text(f"{title}{content}")
         result.image(images)
-        result.text(
-            f"\n{username}{datetime.fromtimestamp(ts).strftime('%H:%M')}{ip}{detail}{url}"
-        )
+        result.text(detail_line)
 
         return result

@@ -47,4 +47,14 @@ class Article(Model):
         )
 
 
+class ImageStorage(Model):
+    id = TextField(primary_key=True, null=False)
+    filename = TextField(null=False)
+    mime = TextField(null=False)
+
+    class Meta:
+        database = main_db
+
+
 Article.create_table()
+ImageStorage.create_table()
