@@ -149,17 +149,11 @@ class Struct:
         url
         """
         detail_line = "\n"
-
-        if username != "":
-            detail_line += username
-
-        detail_line += f" · {datetime.fromtimestamp(ts).strftime('%H:%M')}"
-
-        if ip != "":
-            detail_line += f" · {ip}"
-
-        if detail != "":
-            detail_line += f" · {detail}"
+        time_ = datetime.fromtimestamp(ts).strftime("%H:%M")
+        detail_line_first_line_component = [
+            c for c in [username, time_, ip, detail] if c != ""
+        ]
+        detail_line += " · ".join(detail_line_first_line_component)
 
         if url != "":
             detail_line += "\n" + url
